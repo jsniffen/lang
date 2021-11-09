@@ -13,7 +13,7 @@ enum lexeme_id {
 
 struct lexeme {
 	int line;
-	enum token_id id;
+	enum lexeme_id id;
 };
 
 void print_lexeme(struct lexeme lex)
