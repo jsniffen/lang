@@ -4,16 +4,19 @@ enum lexeme_id {
 	DIVIDE,
 	MULTIPLY,
 	MODULUS,
-	IDENTIFIER,
+	IDENT,
 	LEFT_BRACE,
 	RIGHT_BRACE,
 	LEFT_PAREN,
 	RIGHT_PAREN,
+	COMMA,
 };
 
 struct lexeme {
 	int line;
+	int character;
 	enum lexeme_id id;
+	char name[256];
 };
 
 void print_lexeme(struct lexeme lex)
@@ -21,37 +24,40 @@ void print_lexeme(struct lexeme lex)
 	char *id;
 	switch (lex.id) {
 		case ADD:
-			id = "ADD";
+			id = "+";
 			break;
 		case SUBTRACT:
-			id = "SUBTRACT";
+			id = "-";
 			break;
 		case DIVIDE:
-			id = "DIVIDE";
+			id = "/";
 			break;
 		case MULTIPLY:
-			id = "MULTIPLY";
+			id = "*";
 			break;
 		case MODULUS:
-			id = "MODULUS";
+			id = "%";
 			break;
-		case IDENTIFIER:
-			id = "IDENTIFIER";
+		case IDENT:
+			id = "IDENT";
 			break;
 		case LEFT_BRACE:
-			id = "LEFT_BRACE";
+			id = "{";
 			break;
 		case RIGHT_BRACE:
-			id = "RIGHT_BRACE";
+			id = "}";
 			break;
 		case LEFT_PAREN:
-			id = "LEFT_PAREN";
+			id = "(";
 			break;
 		case RIGHT_PAREN:
-			id = "RIGHT_PAREN";
+			id = ")";
+			break;
+		case COMMA:
+			id = ",";
 			break;
 	}
-	printf("line: %d, id: %s\n", lex.line, id);
+	printf("%d:%d\t%s\t\"%s\"\n", lex.line, lex.character, id, lex.name);
 }
 
 bool is_newline(char c)
@@ -75,9 +81,36 @@ bool is_operator(char c)
 	return c == '+' || c == '-' || c == '*' || c == '/' || c == '%';
 }
 
-void do_operator(struct lexeme *lex, char c, int line)
+bool is_number(char c)
 {
-	lex->line = line;
+	return c >= '0' && c <= '9';
+}
+
+bool is_character(char c)
+{
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+bool is_identifier(char c)
+{
+	return is_number(c) || is_character(c);
+}
+
+int do_identifier(struct lexeme *lex, char *buffer, int len)
+{
+	lex->id = IDENT;
+	int i;
+	for (i = 0; i < len; ++i) {
+		if (!is_character(buffer[i]) && !is_number(buffer[i])) break;
+
+		lex->name[i] = buffer[i];
+	}
+	lex->name[i] = '\0';
+	return i-1;
+}
+
+void do_operator(struct lexeme *lex, char c)
+{
 	switch (c) {
 		case '+':
 			lex->id = ADD;
@@ -98,12 +131,15 @@ void do_operator(struct lexeme *lex, char c, int line)
 }
 
 bool is_delimiter(char c) {
-	return c == '{' || c == '}' || c == '(' || c == ')';
+	return  c == '{' ||
+		c == '}' ||
+		c == '(' ||
+		c == ')' ||
+		c == ',';
 }
 
-void do_delimiter(struct lexeme *lex, char c, int line)
+void do_delimiter(struct lexeme *lex, char c)
 {
-	lex->line = line;
 	switch (c) {
 		case '{':
 			lex->id = LEFT_BRACE;
@@ -116,6 +152,9 @@ void do_delimiter(struct lexeme *lex, char c, int line)
 			break;
 		case ')':
 			lex->id = RIGHT_PAREN;
+			break;
+		case ',':
+			lex->id = COMMA;
 			break;
 	};
 }

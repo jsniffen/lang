@@ -5,11 +5,6 @@ add(x int, y int) int
 	return x + y
 }
 
-mod(x int, y int) int
-{
-	return x % y
-}
-
 // the entrypoint of the program.
 main() 
 {
