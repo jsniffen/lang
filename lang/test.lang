@@ -1,0 +1,17 @@
+add(x, y int) int {
+  return x+y
+}
+
+test "add" {
+  cases = [
+    (3, add(1, 2)),
+    (0, add(0, 0)),
+    (-5, add(5, -10)),
+  ]
+
+  for want, got in cases {
+    if want != got {
+      fail("got: {got}; want: {want}")
+    }
+  }
+}

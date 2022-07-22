@@ -1,30 +1,73 @@
-file = open("main.lang").read()
+from enum import Enum
+
+class Token(Enum):
+    COMMENT = 1
+    IDENTIFIER = 2
+    FUNCTION = 3
+    LBRACE = 4
+    RBRACE = 5
+    LPAREN = 6
+    RPAREN = 7
+    STRING = 8
+
+file = open("lang/hello.lang").read()
 
 def eatline(buffer, i):
-    while i < len(buffer) and buffer[i] != "\n":
-        i += 1
-    return i+1 if i < len(buffer)-1 else i
+    j = i
+    while j < len(buffer) and buffer[j] != "\n":
+        j += 1
+    return j-i
 
+def eatstring(buffer, i):
+    j = i+1
+    while j < len(buffer) and buffer[j] != "\"":
+        j += 1
+    return j-i
+
+def getword(buffer, i):
+    j = i
+    chars = []
+    while j < len(buffer) and buffer[j].isalpha():
+        chars.append(buffer[j])
+        j += 1
+    return "".join(chars), j-i-1
+
+tokens = []
 i = 0
 line, column = 1, 1
 
 while i < len(file):
+    eat = 0
+    newline = False
+
     char = file[i]
 
-    if char == "/" and i < len(file)-1 and file[i+1] == "/":
-        print(f"{line}:{column} COMMENT")
-        i = eatline(file, i)
-        line += 1
-        column = 1
-        continue
-
     if char == "\n":
-        line += 1
+        newline = True
+    elif char == "/" and i < len(file)-1 and file[i+1] == "/":
+        eat = eatline(file, i)
+        tokens.append(Token.COMMENT)
+    if char == "{":
+        tokens.append(Token.LBRACE)
+    elif char == "}":
+        tokens.append(Token.RBRACE)
+    elif char == "(":
+        tokens.append(Token.LPAREN)
+    elif char == ")":
+        tokens.append(Token.RPAREN)
+    elif char == "\"":
+        eat = eatstring(file, i)
+        tokens.append(Token.STRING)
+    elif char.isalpha():
+        word, eat = getword(file, i)
+        tokens.append(Token.IDENTIFIER)
+    if newline:
         column = 1
-        i += 1
-        continue
+        line += 1
+    else:
+        column += 1
 
+    i += 1 + eat
 
-    column += 1
-    i += 1
-
+for t in tokens:
+    print(t)

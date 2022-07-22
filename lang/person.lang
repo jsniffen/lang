@@ -1,0 +1,12 @@
+struct Person {
+  age  int
+  name string
+}
+
+main() {
+  p = &Person{
+    age: 27,
+    name: "Julian",
+  }
+  println(p)
+}

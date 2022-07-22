@@ -1,0 +1,11 @@
+// add two numbers
+add(x int, y int) int {
+  return x + y
+}
+
+main() {
+  x = 1
+  y = 2
+  result = add(x, y)
+  println("{} + {} = {}", x, y, result)
+}

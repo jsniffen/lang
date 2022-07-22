@@ -1,0 +1,23 @@
+struct Polynomial {
+  x int
+  y int
+  z int
+}
+
+add(p1, p2 Polynomial) Polynomial {
+  return Polynomial{
+    p1.x + p2.x,
+    p1.y + p2.x,
+    p1.z + p2.z,
+  }
+}
+
+tostring(p Polynomial) {
+  return sprintf("Polynomial({p.x}, {p.y}, {p.z})")
+}
+
+main() {
+  p1 = Polynomial{1, 2, 3}
+  p2 = Polynomial{4, 5, 6}
+  println(add(p1, p2))
+}
