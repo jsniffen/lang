@@ -1,30 +1,51 @@
-file = open("main.lang").read()
+look = None
 
-def eatline(buffer, i):
-    while i < len(buffer) and buffer[i] != "\n":
-        i += 1
-    return i+1 if i < len(buffer)-1 else i
+def get_char():
+    global look
+    look = input()[0]
 
-i = 0
-line, column = 1, 1
+def error(s):
+    print(f"Error: {s}.")
 
-while i < len(file):
-    char = file[i]
+def abort(s):
+    error(s)
+    exit(1)
 
-    if char == "/" and i < len(file)-1 and file[i+1] == "/":
-        print(f"{line}:{column} COMMENT")
-        i = eatline(file, i)
-        line += 1
-        column = 1
-        continue
+def expected(s):
+    abort(f"{s} Expected")
 
-    if char == "\n":
-        line += 1
-        column = 1
-        i += 1
-        continue
+def match(c):
+    if c == look:
+        pass
+    else:
+        expected(f"'{c}'")
+
+def get_name():
+    if not look.isalpha():
+        expected("Name")
+    return look
+
+def get_num():
+    if not look.isdigit():
+        expected("Integer")
+    return look
+
+def emit(s):
+    print(f"\t{s}", end="")
+
+def emit_ln(s):
+    emit(s)
+    print()
 
 
-    column += 1
-    i += 1
+def init():
+    get_char()
+
+def expression():
+    emit_ln(f"Move #{get_num()},D0")
+
+init()
+expression()
+
+
 
