@@ -1,122 +1,108 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
 
-char look;
-
-void nextchar()
+int is_whitespace(char c)
 {
-  look = getchar();
+	return c == '\n'
+		|| c == ' '
+		|| c == '\t';
+
 }
 
-void error(char *s)
+void error(char *msg)
 {
-  printf("\nError: %s.\n", s);
+	printf(msg);
+	printf("\n");
+	exit(1);
 }
 
-void fail(char *s)
+typedef struct {
+	char *data;
+	char look;
+	int index;
+	int length;
+} file_buffer;
+
+void fb_init(file_buffer *fb, char *filename)
 {
-  error(s);
-  exit(1);
+	FILE *file;
+	int length;
+	char *buffer;
+
+	file = fopen(filename, "rb");
+	if (file == 0) {
+		error("error opening file");
+	}
+	if (fseek(file, 0, SEEK_END) != 0) {
+		fclose(file);
+		error("error seeking file");
+	}
+	length = ftell(file);
+	if (length == -1) {
+		fclose(file);
+		error("error ftell");
+	}
+	if (fseek(file, 0, SEEK_SET)) {
+		fclose(file);
+		error("error seeking file");
+	}
+
+	buffer = malloc(length);
+	if (length != fread(buffer, 1, length, file)) {
+		fclose(file);
+		free(buffer);
+		error("error reading file");
+	}
+
+	fclose(file);
+	fb->length = length;
+	fb->data = buffer;
+	fb->index = 0;
+	fb->look = buffer[0];
 }
 
-void expected(char *s)
+void fb_next(file_buffer *fb)
 {
-  char buf[256];
-  sprintf(buf, "%s: Expected", s);
-  fail(buf);
+	if (fb->index >= fb->length-1) {
+		printf("reached end of file\n");
+		return;
+	}
+	fb->look = fb->data[++fb->index];
 }
 
-void match(char c)
+void fb_match(file_buffer *fb, char c)
 {
-  if (look == c) {
-    nextchar();
-  } else {
-    char buf[256];
-    sprintf(buf, "'%c'", c);
-    expected(buf);
-  }
+	if (fb->look != c) {
+		char buf[256];
+		sprintf(buf, "error: expected %c\n", c);
+		error(buf);
+	}
 }
 
-char getname()
+void fb_eatwhitespace(file_buffer *fb)
 {
-  char c;
-  if (!isalpha(look)) {
-    expected("Name");
-  }
-  c = look;
-  nextchar();
-  return c;
+	while (is_whitespace(fb->look)) {
+		fb_next(fb);
+	}
 }
 
-char getnum()
-{
-  char c;
-  if (!isdigit(look)) {
-    expected("Integer");
-  }
-  c = look;
-  nextchar();
-  return c;
+void fb_function(file_buffer *fb) {
+	fb_eatwhitespace(fb);
+	while (isalpha(fb->look)) {
+		printf("%c", fb->look);
+		fb_next(fb);
+	}
+	fb_eatwhitespace(fb);
+	fb_match(fb,')');
+	printf("\n");
 }
 
-void emit(char *s)
-{
-  printf("\t%s", s);
-}
-
-void emitln(char *s)
-{
-  emit(s);
-  printf("\n");
-}
-
-void init()
-{
-  nextchar();
-}
-
-void term()
-{
-  char buf[256];
-  sprintf(buf, "MOVE #%c,D0", getnum());
-  emitln(buf);
-}
-
-void add()
-{
-  match('+');
-  term();
-  emitln("ADD D1,D0");
-}
-
-void subtract()
-{
-  match('-');
-  term();
-  emitln("SUB D1,D0");
-  emitln("NEG D0");
-}
-
-void expression()
-{
-  term();
-  while (look == '+' || look == '-') {
-    emitln("Move D0,D1");
-    switch (look) {
-      case '+':
-        add();
-        break;
-      case '-':
-        subtract();
-        break;
-      default:
-        expected("Addop");
-        break;
-    }
-  }
-}
 
 int main()
 {
-  init();
-  expression();
+	file_buffer fb;
+	fb_init(&fb, "main.lang");
+	fb_function(&fb);
+	return 0;
 }
