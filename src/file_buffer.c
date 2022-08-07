@@ -3,6 +3,7 @@ typedef struct {
 	char look;
 	int index;
 	int length;
+	write_buffer wb;
 } file_buffer;
 
 void fb_init(file_buffer *fb, char *filename)
@@ -10,6 +11,7 @@ void fb_init(file_buffer *fb, char *filename)
 	read_file(filename, &fb->data, &fb->length);
 	fb->index = 0;
 	fb->look = fb->data[0];
+	wb_init(&fb->wb);
 }
 
 void fb_next(file_buffer *fb)
@@ -37,7 +39,8 @@ void fb_eatwhitespace(file_buffer *fb)
 	}
 }
 
-void fb_function(file_buffer *fb) {
+void fb_function(file_buffer *fb)
+{
 	fb_eatwhitespace(fb);
 	while (isalpha(fb->look)) {
 		printf("%c", fb->look);
@@ -46,4 +49,14 @@ void fb_function(file_buffer *fb) {
 	fb_eatwhitespace(fb);
 	fb_match(fb,'(');
 	printf("\n");
+}
+
+void fb_parse(file_buffer *fb)
+{
+	wb_write(&fb->wb, "writing\n", 8);
+}
+
+void fb_write(file_buffer *fb, char *filename)
+{
+	write_file(filename, fb->wb.data, fb->wb.length);
 }

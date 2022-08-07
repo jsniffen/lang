@@ -41,3 +41,32 @@ char *write_file(char *filename, char *data, int length)
 	fclose(file);
 	return lenwrite == length ? 0 : "error writing file";
 }
+
+typedef struct {
+	char *data;
+	int cursor;
+	int length;
+} write_buffer;
+
+void wb_init(write_buffer *wb)
+{
+	wb->cursor = 0;
+	wb->length = 256;
+	wb->data = malloc(256);
+	memset(wb->data, 0, 256);
+}
+
+void wb_write(write_buffer *wb, char *s, int length)
+{
+	if (wb->cursor + length >= wb->length-1) {
+		int newlen = 2*(wb->length+length);
+		char *newdata = malloc(newlen);
+		memset(newdata, 0, newlen);
+		memcpy(newdata, wb->data, wb->length);
+		free(wb->data);
+		wb->data = newdata;
+		wb->length = newlen;
+	}
+	memcpy(wb->data+wb->cursor, s, length);
+	wb->cursor += length;
+}
