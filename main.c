@@ -11,6 +11,6 @@ int main()
 	file_buffer fb;
 	fb_init(&fb, "main.lang");
 	fb_parse(&fb);
-	fb_write(&fb, "main.asm");
+	fb_writefile(&fb, "main.asm");
 	return 0;
 }
