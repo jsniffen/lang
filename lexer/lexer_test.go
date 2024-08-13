@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestNewLexer(t *testing.T) {
+func TestLex(t *testing.T) {
 	input := `
 extern func puts(*u8) i32;
 
