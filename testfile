@@ -1,0 +1,6 @@
+extern func puts(*u8) int;
+
+func main() {
+	puts("hello world");
+	return;
+}
