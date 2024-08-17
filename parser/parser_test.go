@@ -10,9 +10,11 @@ func TestParser(t *testing.T) {
 	l := lexer.New(input)
 	p := New(l)
 
-	prog, err := p.ParseProgram()
-	if err != nil {
-		panic(err)
+	prog := p.ParseProgram()
+	if p.HasErrors() {
+		p.PrintErrors()
+		t.Fail()
+		return
 	}
 
 	statements := []string{

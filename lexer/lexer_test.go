@@ -111,16 +111,16 @@ func TestLexMath(t *testing.T) {
 
 func TestLineColumn(t *testing.T) {
 	input := `x = 1
-y=2`
+y = 2`
 	lexer := New(input)
 
 	tests := []token.Token{
 		token.New(token.IDENT, "x", 1, 0),
 		token.New(token.ASSIGN, "=", 1, 2),
 		token.New(token.INT, "1", 1, 4),
-		token.New(token.IDENT, "y", 0, 0),
-		token.New(token.ASSIGN, "=", 0, 2),
-		token.New(token.INT, "2", 0, 4),
+		token.New(token.IDENT, "y", 2, 0),
+		token.New(token.ASSIGN, "=", 2, 2),
+		token.New(token.INT, "2", 2, 4),
 	}
 	testIndex := 0
 	for got := lexer.NextToken(); got.Type != token.EOF; got = lexer.NextToken() {
