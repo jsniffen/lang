@@ -9,11 +9,16 @@ type Lexer struct {
 	next int
 	ch   byte
 	data string
+
+	line int
+	col  int
 }
 
 func New(s string) *Lexer {
 	l := &Lexer{data: s}
 	l.advance()
+	l.line = 1
+	l.col = 0
 	return l
 }
 
@@ -21,44 +26,45 @@ func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 	l.eatWhitespace()
 
+	line, col := l.line, l.col
 	switch ch := l.ch; ch {
 	case '(':
-		tok = token.Token{token.LPAREN, string(l.ch)}
+		tok = token.New(token.LPAREN, string(l.ch), line, col)
 	case ')':
-		tok = token.Token{token.RPAREN, string(l.ch)}
+		tok = token.New(token.RPAREN, string(l.ch), line, col)
 	case '{':
-		tok = token.Token{token.LBRACE, string(l.ch)}
+		tok = token.New(token.LBRACE, string(l.ch), line, col)
 	case '}':
-		tok = token.Token{token.RBRACE, string(l.ch)}
+		tok = token.New(token.RBRACE, string(l.ch), line, col)
 	case '*':
-		tok = token.Token{token.ASTERISK, string(l.ch)}
+		tok = token.New(token.ASTERISK, string(l.ch), line, col)
 	case '+':
-		tok = token.Token{token.PLUS, string(l.ch)}
+		tok = token.New(token.PLUS, string(l.ch), line, col)
 	case ';':
-		tok = token.Token{token.SEMICOLON, string(l.ch)}
+		tok = token.New(token.SEMICOLON, string(l.ch), line, col)
 	case '=':
-		tok = token.Token{token.ASSIGN, string(l.ch)}
+		tok = token.New(token.ASSIGN, string(l.ch), line, col)
 	case '/':
-		tok = token.Token{token.SLASH, string(l.ch)}
+		tok = token.New(token.SLASH, string(l.ch), line, col)
 	case '-':
-		tok = token.Token{token.MINUS, string(l.ch)}
+		tok = token.New(token.MINUS, string(l.ch), line, col)
 	case '"':
 		value := l.eatString()
-		return token.Token{token.STRING, value}
+		return token.New(token.STRING, value, line, col)
 	default:
 		if isAlpha(ch) {
 			value := l.eatIdent()
 			tokenType, ok := token.KeywordsMap[value]
 			if ok {
-				return token.Token{tokenType, value}
+				return token.New(tokenType, value, line, col)
 			} else {
-				return token.Token{token.IDENT, value}
+				return token.New(token.IDENT, value, line, col)
 			}
 		} else if isDigit(ch) {
 			value := l.eatInt()
-			return token.Token{token.INT, value}
+			return token.New(token.INT, value, line, col)
 		} else {
-			return token.Token{token.EOF, ""}
+			return token.New(token.EOF, "", line, col)
 		}
 	}
 
@@ -68,6 +74,13 @@ func (l *Lexer) NextToken() token.Token {
 }
 
 func (l *Lexer) advance() {
+	if l.ch == '\n' {
+		l.line += 1
+		l.col = 0
+	} else {
+		l.col += 1
+	}
+
 	if l.next >= len(l.data) {
 		l.pos = l.next
 		l.ch = 0
