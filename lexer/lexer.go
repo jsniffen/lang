@@ -59,6 +59,8 @@ func (l *Lexer) NextToken() token.Token {
 		tok = token.New(token.SLASH, string(l.ch), line, col)
 	case '-':
 		tok = token.New(token.MINUS, string(l.ch), line, col)
+	case ',':
+		tok = token.New(token.COMMA, string(l.ch), line, col)
 	case '"':
 		value := l.eatString()
 		return token.New(token.STRING, value, line, col)

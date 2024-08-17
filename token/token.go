@@ -5,6 +5,7 @@ type TokenType string
 const (
 	ASSIGN    = "="
 	ASTERISK  = "ASTERISK"
+	COMMA     = ","
 	EOF       = "EOF"
 	EXTERN    = "EXTERN"
 	FUNC      = "FUNC"

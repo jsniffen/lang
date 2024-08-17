@@ -42,55 +42,28 @@ func (p *Program) String() string {
 	return out.String()
 }
 
-type FuncDecl struct {
-	Token token.Token
-	Body  []Statement
-}
-
-func (f *FuncDecl) isStatement() {}
-func (f *FuncDecl) DebugString(i int) string {
-	var out bytes.Buffer
-	printIndentLine(i, &out)
-	out.WriteString("FuncDecl ")
-	out.WriteString(f.Token.Value)
-	for _, s := range f.Body {
-		out.WriteString(s.DebugString(i + 1))
-	}
-	return out.String()
-}
-
-func (f *FuncDecl) String() string {
-	var out bytes.Buffer
-	out.WriteString(f.Token.Value)
-	for _, s := range f.Body {
-		out.WriteString(s.String())
-		out.WriteString("\n")
-	}
-	return out.String()
-}
-
-type VariableDecl struct {
-	Name  token.Token
-	Value Expression
-}
-
-func (v *VariableDecl) isStatement() {}
-func (v *VariableDecl) DebugString(i int) string {
-	var out bytes.Buffer
-	printIndentLine(i, &out)
-	out.WriteString("VariableDeclation ")
-	out.WriteString(v.Name.Value)
-	out.WriteString(" =")
-	out.WriteString(v.Value.DebugString(i + 1))
-	return out.String()
-}
-func (v *VariableDecl) String() string {
-	var out bytes.Buffer
-	out.WriteString(v.Name.Value)
-	out.WriteString(" = ")
-	out.WriteString(v.Value.String())
-	return out.String()
-}
+// type VarDecl struct {
+// Name  token.Token
+// Value Expression
+// }
+//
+// func (v *VarDecl) isStatement() {}
+// func (v *VarDecl) DebugString(i int) string {
+// var out bytes.Buffer
+// printIndentLine(i, &out)
+// out.WriteString("VarDecl ")
+// out.WriteString(v.Name.Value)
+// out.WriteString(" =")
+// out.WriteString(v.Value.DebugString(i + 1))
+// return out.String()
+// }
+// func (v *VarDecl) String() string {
+// var out bytes.Buffer
+// out.WriteString(v.Name.Value)
+// out.WriteString(" = ")
+// out.WriteString(v.Value.String())
+// return out.String()
+// }
 
 type IntegerLiteral struct {
 	Token token.Token

@@ -14,16 +14,15 @@ const TestInput = `
 `
 
 func main() {
-	l, err := lexer.FromFile("testfile")
+	l, err := lexer.FromFile("helloworld")
 	if err != nil {
 		panic(err)
 	}
 	p := parser.New(l)
 
-	prog := p.ParseProgram()
-	if p.HasErrors() {
+	prog, ok := p.ParseProgram()
+	if !ok {
 		p.PrintErrors()
-	} else {
-		fmt.Println(prog.DebugString(0))
 	}
+	fmt.Println(prog.DebugString(0))
 }

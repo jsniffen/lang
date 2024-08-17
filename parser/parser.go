@@ -19,6 +19,12 @@ const (
 	FUNCCALL
 )
 
+const (
+	_ int = iota
+	PROGRAM
+	INNER
+)
+
 type Parser struct {
 	curr   token.Token
 	next   token.Token
@@ -33,18 +39,18 @@ func New(l *lexer.Lexer) *Parser {
 	return p
 }
 
-func (p *Parser) ParseProgram() *ast.Program {
+func (p *Parser) ParseProgram() (*ast.Program, bool) {
 	prog := &ast.Program{make([]ast.Statement, 0)}
 
 	for !p.currTokenIs(token.EOF) {
-		s := p.parseStatement()
-		if s == nil {
-			break
+		s, ok := p.parseStatement(PROGRAM)
+		if !ok {
+			return prog, false
 		}
 		prog.Statements = append(prog.Statements, s)
 	}
 
-	return prog
+	return prog, true
 }
 
 func (p *Parser) HasErrors() bool {
@@ -57,38 +63,50 @@ func (p *Parser) PrintErrors() {
 	}
 }
 
-func (p *Parser) parseStatement() ast.Statement {
+func (p *Parser) parseStatement(level int) (ast.Statement, bool) {
 	switch p.curr.Type {
 	case token.IDENT:
-		return p.parseVariableDecl()
-	case token.FUNC:
-		return p.parseFuncDecl()
+		switch p.next.Type {
+		case token.LPAREN:
+			if level == PROGRAM {
+				return p.parseFuncDecl()
+			} else {
+				return p.parseFuncCall()
+			}
+		case token.ASSIGN:
+			return p.parseVarDecl()
+		default:
+			p.Error(p.next, "invalid token: '%s'", p.next.Value)
+			return nil, false
+		}
 	default:
 		p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
-		return nil
+		return nil, false
 	}
 }
 
-func (p *Parser) parseExpression(precedence int) ast.Expression {
+func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
 	var left ast.Expression
+	var ok bool
 
 	switch p.curr.Type {
 	case token.LPAREN:
-		left = p.parseGroupedExpression()
+		left, ok = p.parseGroupedExpression()
 	case token.MINUS:
-		left = p.parsePrefixExpression()
+		left, ok = p.parsePrefixExpression()
 	case token.INT:
-		left = p.parseIntegerLiteral()
+		left, ok = p.parseIntegerLiteral()
 	case token.IDENT:
-		left = p.parseIdentifier()
+		left, ok = p.parseIdentifier()
 	case token.STRING:
-		left = p.parseStringLiteral()
+		left, ok = p.parseStringLiteral()
 	default:
 		p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
+		return left, false
 	}
 
-	if left == nil {
-		return left
+	if !ok {
+		return left, false
 	}
 
 	for precedence < p.currTokenPrecedence() {
@@ -100,76 +118,87 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		case token.MINUS:
 			fallthrough
 		case token.PLUS:
-			left = p.parseInfixExpression(left)
+			left, ok = p.parseInfixExpression(left)
 		default:
-			return left
+			return left, true
 		}
 
-		if left == nil {
-			return left
+		if !ok {
+			return left, false
 		}
 	}
 
-	return left
+	return left, true
 }
 
-func (p *Parser) parseGroupedExpression() ast.Expression {
+func (p *Parser) parseGroupedExpression() (ast.Expression, bool) {
 	p.advance()
-	exp := p.parseExpression(LOWEST)
+	exp, ok := p.parseExpression(LOWEST)
+	if !ok {
+		return nil, false
+	}
+
 	if ok, msg := p.assertCurrIs(token.LPAREN); !ok {
 		p.Error(p.curr, msg)
-		return exp
+		return nil, false
 	}
 	p.advance()
-	return exp
+	return exp, true
 }
 
-func (p *Parser) parsePrefixExpression() ast.Expression {
+func (p *Parser) parsePrefixExpression() (ast.Expression, bool) {
+	var ok bool
 	exp := &ast.PrefixExpression{Token: p.curr}
 	p.advance()
-	exp.Right = p.parseExpression(PREFIX)
-	return exp
+	exp.Right, ok = p.parseExpression(PREFIX)
+	if !ok {
+		return nil, false
+	}
+	return exp, true
 }
 
-func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, bool) {
+	var ok bool
 	exp := &ast.InfixExpression{Token: p.curr, Left: left}
 	precedence := p.currTokenPrecedence()
 	p.advance()
-	exp.Right = p.parseExpression(precedence)
-	return exp
+	exp.Right, ok = p.parseExpression(precedence)
+	if !ok {
+		return nil, ok
+	}
+	return exp, true
 }
 
-func (p *Parser) parseIdentifier() *ast.Identifier {
+func (p *Parser) parseIdentifier() (*ast.Identifier, bool) {
 	id := &ast.Identifier{Token: p.curr}
 	p.advance()
-	return id
+	return id, true
 }
 
-func (p *Parser) parseIntegerLiteral() *ast.IntegerLiteral {
+func (p *Parser) parseIntegerLiteral() (*ast.IntegerLiteral, bool) {
 	i := &ast.IntegerLiteral{Token: p.curr}
 	p.advance()
 	val, err := strconv.ParseInt(i.Token.Value, 10, 64)
 	if err != nil {
 		p.Error(p.curr, "Error parsing integer literal: %v", err)
-		return i
+		return i, false
 	}
 	i.Value = val
-	return i
+	return i, true
 }
 
-func (p *Parser) parseStringLiteral() *ast.StringLiteral {
+func (p *Parser) parseStringLiteral() (*ast.StringLiteral, bool) {
 	s := &ast.StringLiteral{Token: p.curr}
 	p.advance()
-	return s
+	return s, true
 }
 
-func (p *Parser) parseFuncDecl() *ast.FuncDecl {
+func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	f := &ast.FuncDecl{}
-	p.advance()
 
 	if ok, msg := p.assertCurrIs(token.IDENT); !ok {
 		p.Error(p.curr, msg)
-		return nil
+		return nil, false
 	}
 
 	f.Token = p.curr
@@ -177,58 +206,151 @@ func (p *Parser) parseFuncDecl() *ast.FuncDecl {
 
 	if ok, msg := p.assertCurrIs(token.LPAREN); !ok {
 		p.Error(p.curr, msg)
-		return nil
+		return nil, false
 	}
 	p.advance()
+
+	f.Params = make([]*ast.FuncParam, 0)
+	for !p.currTokenIs(token.RPAREN) {
+		param, ok := p.parseFuncParam()
+		if !ok {
+			return nil, false
+		}
+		f.Params = append(f.Params, param)
+
+		if p.currTokenIs(token.COMMA) {
+			p.advance()
+		}
+	}
 
 	if ok, msg := p.assertCurrIs(token.RPAREN); !ok {
 		p.Error(p.curr, msg)
-		return nil
+		return nil, false
 	}
 	p.advance()
 
+	if !p.currTokenIs(token.LBRACE) {
+		return f, true
+	}
+
 	if ok, msg := p.assertCurrIs(token.LBRACE); !ok {
 		p.Error(p.curr, msg)
-		return nil
+		return nil, false
 	}
 	p.advance()
 
 	f.Body = make([]ast.Statement, 0)
 	for !p.currTokenIs(token.RBRACE) {
-		s := p.parseStatement()
-		if s == nil {
-			return nil
+		s, ok := p.parseStatement(INNER)
+		if !ok {
+			return nil, false
 		}
 		f.Body = append(f.Body, s)
 	}
 
 	if ok, msg := p.assertCurrIs(token.RBRACE); !ok {
 		p.Error(p.curr, msg)
-		return nil
+		return nil, false
 	}
 	p.advance()
 
-	return f
+	return f, true
 }
 
-func (p *Parser) parseVariableDecl() *ast.VariableDecl {
-	s := &ast.VariableDecl{Name: p.curr}
+func (p *Parser) parseFuncParam() (*ast.FuncParam, bool) {
+	fp := &ast.FuncParam{}
+
+	if ok, msg := p.assertCurrIs(token.IDENT); !ok {
+		p.Error(p.curr, msg)
+		return nil, false
+	}
+	fp.Type = p.curr
 	p.advance()
 
-	if !p.currTokenIs(token.ASSIGN) {
-		p.Error(p.curr, "expected '='")
-		return nil
+	if p.currTokenIs(token.IDENT) {
+		fp.Name = fp.Type
+		fp.Type = p.curr
+		p.advance()
+	}
+
+	return fp, true
+}
+
+func (p *Parser) parseFuncCall() (*ast.FuncCall, bool) {
+	fc := &ast.FuncCall{Token: p.curr, Args: make([]ast.Expression, 0)}
+
+	if ok, msg := p.assertCurrIs(token.IDENT); !ok {
+		p.Error(p.curr, msg)
+		return nil, false
 	}
 	p.advance()
 
-	s.Value = p.parseExpression(LOWEST)
+	if ok, msg := p.assertCurrIs(token.LPAREN); !ok {
+		p.Error(p.curr, msg)
+		return nil, false
+	}
+	p.advance()
 
-	return s
+	for !p.currTokenIs(token.RPAREN) {
+		exp, ok := p.parseExpression(LOWEST)
+		if !ok {
+			return nil, false
+		}
+		fc.Args = append(fc.Args, exp)
+
+		if p.currTokenIs(token.COMMA) {
+			p.advance()
+		}
+	}
+
+	if ok, msg := p.assertCurrIs(token.RPAREN); !ok {
+		p.Error(p.curr, msg)
+		return nil, false
+	}
+	p.advance()
+
+	return fc, true
+}
+
+func (p *Parser) parseVarDecl() (*ast.VarDecl, bool) {
+	if !p.checkCurrIs(token.IDENT) {
+		return nil, false
+	}
+
+	vd := &ast.VarDecl{Name: p.curr}
+	p.advance()
+
+	if p.currTokenIs(token.IDENT) {
+		vd.Type = p.curr
+		p.advance()
+	}
+
+	if !p.checkCurrIs(token.ASSIGN) {
+		return nil, false
+	}
+	p.advance()
+
+	exp, ok := p.parseExpression(LOWEST)
+	if !ok {
+		return nil, false
+	}
+	vd.Value = exp
+
+	return vd, true
 }
 
 func (p *Parser) advance() {
 	p.curr = p.next
 	p.next = p.l.NextToken()
+}
+
+func (p *Parser) checkCurrIs(t token.TokenType) bool {
+	if p.curr.Type == t {
+		return true
+	} else {
+		p.Error(p.curr, fmt.Sprintf("expected %v, got %v", t, p.curr.Type))
+		return false
+	}
 }
 
 func (p *Parser) assertCurrIs(t token.TokenType) (bool, string) {
@@ -264,6 +386,6 @@ func (p *Parser) currTokenPrecedence() int {
 
 func (p *Parser) Error(t token.Token, msg string, args ...interface{}) {
 	msg = fmt.Sprintf(msg, args...)
-	err := fmt.Sprintf("%s:%d:%d: %s\n", p.l.Filename, t.Line, t.Column, msg)
+	err := fmt.Sprintf("%s:%d:%d: %s", p.l.Filename, t.Line, t.Column, msg)
 	p.errors = append(p.errors, err)
 }

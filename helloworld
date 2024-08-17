@@ -1,0 +1,6 @@
+puts(s u8)
+x = 1 + 2
+
+main() {
+	puts("Hello world", x)
+}
