@@ -8,7 +8,7 @@ import (
 
 func main() {
 	input := `
-	x = 3 + 2 * 3
+	x = -1*2+3-1
 	`
 	l := lexer.New(input)
 	p := parser.New(l)

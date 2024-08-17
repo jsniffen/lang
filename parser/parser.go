@@ -60,6 +60,8 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, error) {
 	var err error
 
 	switch p.curr.Type {
+	case token.MINUS:
+		left, err = p.parsePrefixExpression()
 	case token.INT:
 		left, err = p.parseIntegerLiteral()
 	case token.IDENT:
@@ -74,7 +76,11 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, error) {
 
 	for precedence < p.currTokenPrecedence() {
 		switch p.curr.Type {
+		case token.SLASH:
+			fallthrough
 		case token.ASTERISK:
+			fallthrough
+		case token.MINUS:
 			fallthrough
 		case token.PLUS:
 			left, err = p.parseInfixExpression(left)
@@ -88,6 +94,20 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, error) {
 	}
 
 	return left, nil
+}
+
+func (p *Parser) parsePrefixExpression() (ast.Expression, error) {
+	var err error
+
+	exp := &ast.PrefixExpression{Token: p.curr}
+
+	p.advance()
+	exp.Right, err = p.parseExpression(PREFIX)
+	if err != nil {
+		return exp, fmt.Errorf("Error parsing infix expression: %v", err)
+	}
+
+	return exp, nil
 }
 
 func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, error) {
@@ -161,7 +181,11 @@ func (p *Parser) nextTokenIs(t token.TokenType) bool {
 func (p *Parser) currTokenPrecedence() int {
 	switch p.curr.Type {
 	case token.ASTERISK:
+		fallthrough
+	case token.SLASH:
 		return PRODUCT
+	case token.MINUS:
+		fallthrough
 	case token.PLUS:
 		return SUM
 	default:

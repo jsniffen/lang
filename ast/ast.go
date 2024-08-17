@@ -82,6 +82,22 @@ func (i *InfixExpression) String() string {
 	return out.String()
 }
 
+type PrefixExpression struct {
+	Token token.Token
+	Right Expression
+}
+
+func (p *PrefixExpression) isExpression()      {}
+func (p *PrefixExpression) TokenValue() string { return p.Token.Value }
+func (p *PrefixExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("(")
+	out.WriteString(" " + p.Token.Value + " ")
+	out.WriteString(p.Right.String())
+	out.WriteString(")")
+	return out.String()
+}
+
 type Identifier struct {
 	Token token.Token
 }

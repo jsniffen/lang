@@ -12,6 +12,7 @@ const (
 	INT       = "INT"
 	LBRACE    = "{"
 	LPAREN    = "("
+	MINUS     = "-"
 	PLUS      = "+"
 	RBRACE    = "}"
 	RETURN    = "RETURN"

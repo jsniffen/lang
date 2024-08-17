@@ -80,10 +80,12 @@ func TestLexInt(t *testing.T) {
 }
 
 func TestLexMath(t *testing.T) {
-	input := "1 + 2 * 3 / 4"
+	input := "0 - 1 + 2 * 3 / 4"
 	lexer := New(input)
 
 	tests := []token.Token{
+		token.Token{token.INT, "0"},
+		token.Token{token.MINUS, "-"},
 		token.Token{token.INT, "1"},
 		token.Token{token.PLUS, "+"},
 		token.Token{token.INT, "2"},
