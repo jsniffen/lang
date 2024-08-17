@@ -65,6 +65,7 @@ func (l *Lexer) NextToken() token.Token {
 
 func (l *Lexer) advance() {
 	if l.next >= len(l.data) {
+		l.pos = l.next
 		l.ch = 0
 	} else {
 		l.pos = l.next

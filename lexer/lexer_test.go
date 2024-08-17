@@ -54,3 +54,27 @@ func main() {
 		t.Fatalf("Only produced %d token(s), wanted: %d", testIndex, len(tests))
 	}
 }
+
+func TestLexInt(t *testing.T) {
+	input := "x = 10"
+	lexer := New(input)
+
+	tests := []token.Token{
+		token.Token{token.IDENT, "x"},
+		token.Token{token.ASSIGN, "="},
+		token.Token{token.INT, "10"},
+	}
+	testIndex := 0
+	for got := lexer.NextToken(); got.Type != token.EOF; got = lexer.NextToken() {
+		want := tests[testIndex]
+
+		if got.Type != want.Type || got.Value != want.Value {
+			t.Fatalf("[%d] got: %v, want: %v", testIndex, got, want)
+		}
+		testIndex += 1
+	}
+
+	if testIndex < len(tests) {
+		t.Fatalf("Only produced %d token(s), wanted: %d", testIndex, len(tests))
+	}
+}
