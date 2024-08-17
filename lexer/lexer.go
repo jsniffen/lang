@@ -2,16 +2,17 @@ package lexer
 
 import (
 	"lang/token"
+	"os"
 )
 
 type Lexer struct {
-	pos  int
-	next int
-	ch   byte
-	data string
-
-	line int
-	col  int
+	pos      int
+	next     int
+	ch       byte
+	data     string
+	line     int
+	col      int
+	Filename string
 }
 
 func New(s string) *Lexer {
@@ -20,6 +21,16 @@ func New(s string) *Lexer {
 	l.line = 1
 	l.col = 0
 	return l
+}
+
+func FromFile(f string) (*Lexer, error) {
+	b, err := os.ReadFile(f)
+	if err != nil {
+		return nil, err
+	}
+	l := New(string(b))
+	l.Filename = f
+	return l, nil
 }
 
 func (l *Lexer) NextToken() token.Token {

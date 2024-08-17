@@ -20,64 +20,75 @@ const (
 )
 
 type Parser struct {
-	curr token.Token
-	next token.Token
-	l    *lexer.Lexer
+	curr   token.Token
+	next   token.Token
+	l      *lexer.Lexer
+	errors []string
 }
 
 func New(l *lexer.Lexer) *Parser {
-	p := &Parser{l: l}
+	p := &Parser{l: l, errors: make([]string, 0)}
 	p.advance()
 	p.advance()
 	return p
 }
 
-func (p *Parser) ParseProgram() (*ast.Program, error) {
+func (p *Parser) ParseProgram() *ast.Program {
 	prog := &ast.Program{make([]ast.Statement, 0)}
 
 	for !p.currTokenIs(token.EOF) {
-		s, err := p.parseStatement()
-		if err != nil {
-			return prog, fmt.Errorf("Error parsing program: %v", err)
+		s := p.parseStatement()
+		if s == nil {
+			break
 		}
 		prog.Statements = append(prog.Statements, s)
 	}
 
-	return prog, nil
+	return prog
 }
 
-func (p *Parser) parseStatement() (ast.Statement, error) {
+func (p *Parser) HasErrors() bool {
+	return len(p.errors) > 0
+}
+
+func (p *Parser) PrintErrors() {
+	for _, err := range p.errors {
+		fmt.Println(err)
+	}
+}
+
+func (p *Parser) parseStatement() ast.Statement {
 	switch p.curr.Type {
 	case token.IDENT:
 		return p.parseVariableDecl()
 	case token.FUNC:
 		return p.parseFuncDecl()
 	default:
-		return nil, fmt.Errorf("Error parsing statement: invalid token: %v", p.curr)
+		p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
+		return nil
 	}
 }
 
-func (p *Parser) parseExpression(precedence int) (ast.Expression, error) {
+func (p *Parser) parseExpression(precedence int) ast.Expression {
 	var left ast.Expression
-	var err error
 
 	switch p.curr.Type {
 	case token.LPAREN:
-		left, err = p.parseGroupedExpression()
+		left = p.parseGroupedExpression()
 	case token.MINUS:
-		left, err = p.parsePrefixExpression()
+		left = p.parsePrefixExpression()
 	case token.INT:
-		left, err = p.parseIntegerLiteral()
+		left = p.parseIntegerLiteral()
 	case token.IDENT:
-		left, err = p.parseIdentifier()
+		left = p.parseIdentifier()
 	case token.STRING:
-		left, err = p.parseStringLiteral()
+		left = p.parseStringLiteral()
 	default:
-		err = fmt.Errorf("invalid token: %v", p.curr)
+		p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
 	}
 
-	if err != nil {
-		return left, fmt.Errorf("Error parsing expression: %v", err)
+	if left == nil {
+		return left
 	}
 
 	for precedence < p.currTokenPrecedence() {
@@ -89,145 +100,130 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, error) {
 		case token.MINUS:
 			fallthrough
 		case token.PLUS:
-			left, err = p.parseInfixExpression(left)
+			left = p.parseInfixExpression(left)
 		default:
-			return left, nil
+			return left
 		}
 
-		if err != nil {
-			return left, fmt.Errorf("Error parsing expression: %v", err)
+		if left == nil {
+			return left
 		}
 	}
 
-	return left, nil
+	return left
 }
 
-func (p *Parser) parseGroupedExpression() (ast.Expression, error) {
+func (p *Parser) parseGroupedExpression() ast.Expression {
 	p.advance()
-	exp, err := p.parseExpression(LOWEST)
-	if err == nil && !p.currTokenIs(token.RPAREN) {
-		return exp, fmt.Errorf("Error parsing grouped expression: missing right parenthesis")
+	exp := p.parseExpression(LOWEST)
+	if ok, msg := p.assertCurrIs(token.LPAREN); !ok {
+		p.Error(p.curr, msg)
+		return exp
 	}
 	p.advance()
-	return exp, err
+	return exp
 }
 
-func (p *Parser) parsePrefixExpression() (ast.Expression, error) {
-	var err error
+func (p *Parser) parsePrefixExpression() ast.Expression {
 	exp := &ast.PrefixExpression{Token: p.curr}
-
 	p.advance()
-	exp.Right, err = p.parseExpression(PREFIX)
-	if err != nil {
-		return exp, fmt.Errorf("Error parsing infix expression: %v", err)
-	}
-
-	return exp, nil
+	exp.Right = p.parseExpression(PREFIX)
+	return exp
 }
 
-func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, error) {
-	var err error
-
+func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	exp := &ast.InfixExpression{Token: p.curr, Left: left}
-
 	precedence := p.currTokenPrecedence()
 	p.advance()
-	exp.Right, err = p.parseExpression(precedence)
-	if err != nil {
-		return exp, fmt.Errorf("Error parsing infix expression: %v", err)
-	}
-
-	return exp, nil
+	exp.Right = p.parseExpression(precedence)
+	return exp
 }
 
-func (p *Parser) parseIdentifier() (*ast.Identifier, error) {
+func (p *Parser) parseIdentifier() *ast.Identifier {
 	id := &ast.Identifier{Token: p.curr}
 	p.advance()
-	return id, nil
+	return id
 }
 
-func (p *Parser) parseIntegerLiteral() (*ast.IntegerLiteral, error) {
+func (p *Parser) parseIntegerLiteral() *ast.IntegerLiteral {
 	i := &ast.IntegerLiteral{Token: p.curr}
 	p.advance()
-
 	val, err := strconv.ParseInt(i.Token.Value, 10, 64)
 	if err != nil {
-		return i, fmt.Errorf("Error parsing integer literal: %v", err)
+		p.Error(p.curr, "Error parsing integer literal: %v", err)
+		return i
 	}
 	i.Value = val
-	return i, nil
+	return i
 }
 
-func (p *Parser) parseStringLiteral() (*ast.StringLiteral, error) {
+func (p *Parser) parseStringLiteral() *ast.StringLiteral {
 	s := &ast.StringLiteral{Token: p.curr}
 	p.advance()
-	return s, nil
+	return s
 }
 
-func (p *Parser) parseFuncDecl() (*ast.FuncDecl, error) {
-	var err error
+func (p *Parser) parseFuncDecl() *ast.FuncDecl {
 	f := &ast.FuncDecl{}
 	p.advance()
 
-	if err = p.assertCurrIs(token.IDENT); err != nil {
-		return f, fmt.Errorf("Error parsing function declaration: %v", err)
+	if ok, msg := p.assertCurrIs(token.IDENT); !ok {
+		p.Error(p.curr, msg)
+		return nil
 	}
 
 	f.Token = p.curr
 	p.advance()
 
-	if err = p.assertCurrIs(token.LPAREN); err != nil {
-		return f, fmt.Errorf("Error parsing function declaration: %v", err)
+	if ok, msg := p.assertCurrIs(token.LPAREN); !ok {
+		p.Error(p.curr, msg)
+		return nil
 	}
 	p.advance()
 
-	if err = p.assertCurrIs(token.RPAREN); err != nil {
-		return f, fmt.Errorf("Error parsing function declaration: %v", err)
+	if ok, msg := p.assertCurrIs(token.RPAREN); !ok {
+		p.Error(p.curr, msg)
+		return nil
 	}
 	p.advance()
 
-	if err = p.assertCurrIs(token.LBRACE); err != nil {
-		return f, fmt.Errorf("Error parsing function declaration: %v", err)
+	if ok, msg := p.assertCurrIs(token.LBRACE); !ok {
+		p.Error(p.curr, msg)
+		return nil
 	}
 	p.advance()
 
 	f.Body = make([]ast.Statement, 0)
 	for !p.currTokenIs(token.RBRACE) {
-		s, err := p.parseStatement()
-		if err != nil {
-			return f, fmt.Errorf("Error parsing function declaration: %v", err)
+		s := p.parseStatement()
+		if s == nil {
+			return nil
 		}
 		f.Body = append(f.Body, s)
 	}
 
-	if err = p.assertCurrIs(token.RBRACE); err != nil {
-		return f, fmt.Errorf("Error parsing function declaration: %v", err)
+	if ok, msg := p.assertCurrIs(token.RBRACE); !ok {
+		p.Error(p.curr, msg)
+		return nil
 	}
 	p.advance()
 
-	return f, nil
+	return f
 }
 
-func (p *Parser) parseVariableDecl() (*ast.VariableDecl, error) {
-	var err error
+func (p *Parser) parseVariableDecl() *ast.VariableDecl {
 	s := &ast.VariableDecl{Name: p.curr}
 	p.advance()
 
 	if !p.currTokenIs(token.ASSIGN) {
-		return s, fmt.Errorf("Error parsing variable declaration: expected '=', got: %v", p.next)
+		p.Error(p.curr, "expected '='")
+		return nil
 	}
 	p.advance()
 
-	s.Value, err = p.parseExpression(LOWEST)
-	if err != nil {
-		return s, fmt.Errorf("Error parsing variable declaration: %v", err)
-	}
+	s.Value = p.parseExpression(LOWEST)
 
-	if p.currTokenIs(token.SEMICOLON) {
-		p.advance()
-	}
-
-	return s, nil
+	return s
 }
 
 func (p *Parser) advance() {
@@ -235,11 +231,11 @@ func (p *Parser) advance() {
 	p.next = p.l.NextToken()
 }
 
-func (p *Parser) assertCurrIs(t token.TokenType) error {
+func (p *Parser) assertCurrIs(t token.TokenType) (bool, string) {
 	if p.curr.Type == t {
-		return nil
+		return true, ""
 	} else {
-		return fmt.Errorf("expected %v, got %v", t, p.curr.Type)
+		return false, fmt.Sprintf("expected %v, got %v", t, p.curr.Type)
 	}
 }
 
@@ -264,4 +260,10 @@ func (p *Parser) currTokenPrecedence() int {
 	default:
 		return LOWEST
 	}
+}
+
+func (p *Parser) Error(t token.Token, msg string, args ...interface{}) {
+	msg = fmt.Sprintf(msg, args...)
+	err := fmt.Sprintf("%s:%d:%d: %s\n", p.l.Filename, t.Line, t.Column, msg)
+	p.errors = append(p.errors, err)
 }
