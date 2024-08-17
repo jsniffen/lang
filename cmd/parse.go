@@ -18,5 +18,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(prog)
+	fmt.Println(prog.DebugString(0))
 }

@@ -6,7 +6,7 @@ import (
 )
 
 type Node interface {
-	TokenValue() string
+	DebugString(int) string
 	String() string
 }
 
@@ -24,11 +24,13 @@ type Program struct {
 	Statements []Statement
 }
 
-func (p *Program) TokenValue() string {
-	if len(p.Statements) == 0 {
-		return ""
+func (p *Program) DebugString(i int) string {
+	var out bytes.Buffer
+	out.WriteString("Program")
+	for _, s := range p.Statements {
+		out.WriteString(s.DebugString(i + 1))
 	}
-	return p.Statements[0].TokenValue()
+	return out.String()
 }
 
 func (p *Program) String() string {
@@ -45,11 +47,19 @@ type VariableDeclaration struct {
 	Value Expression
 }
 
-func (v *VariableDeclaration) isStatement()       {}
-func (v *VariableDeclaration) TokenValue() string { return v.Name.Value }
+func (v *VariableDeclaration) isStatement() {}
+func (v *VariableDeclaration) DebugString(i int) string {
+	var out bytes.Buffer
+	printIndentLine(i, &out)
+	out.WriteString("VariableDeclation ")
+	out.WriteString(v.Name.Value)
+	out.WriteString(" =")
+	out.WriteString(v.Value.DebugString(i + 1))
+	return out.String()
+}
 func (v *VariableDeclaration) String() string {
 	var out bytes.Buffer
-	out.WriteString(v.TokenValue())
+	out.WriteString(v.Name.Value)
 	out.WriteString(" = ")
 	out.WriteString(v.Value.String())
 	return out.String()
@@ -60,9 +70,16 @@ type IntegerLiteral struct {
 	Value int64
 }
 
-func (i *IntegerLiteral) isExpression()      {}
-func (i *IntegerLiteral) TokenValue() string { return i.Token.Value }
-func (i *IntegerLiteral) String() string     { return i.Token.Value }
+func (i *IntegerLiteral) isExpression() {}
+func (i *IntegerLiteral) DebugString(indent int) string {
+	var out bytes.Buffer
+	printIndentLine(indent, &out)
+	out.WriteString("IntegerLiteral(")
+	out.WriteString(i.Token.Value)
+	out.WriteString(")")
+	return out.String()
+}
+func (i *IntegerLiteral) String() string { return i.Token.Value }
 
 type InfixExpression struct {
 	Token token.Token
@@ -70,8 +87,18 @@ type InfixExpression struct {
 	Right Expression
 }
 
-func (i *InfixExpression) isExpression()      {}
-func (i *InfixExpression) TokenValue() string { return i.Token.Value }
+func (i *InfixExpression) isExpression() {}
+func (i *InfixExpression) DebugString(indent int) string {
+	var out bytes.Buffer
+	printIndentLine(indent, &out)
+	out.WriteString("InfixExpression")
+	out.WriteString(i.Left.DebugString(indent + 1))
+	printIndentLine(indent+1, &out)
+	out.WriteString(i.Token.Value)
+	out.WriteString(i.Right.DebugString(indent + 1))
+	printIndentLine(indent, &out)
+	return out.String()
+}
 func (i *InfixExpression) String() string {
 	var out bytes.Buffer
 	out.WriteString("(")
@@ -87,8 +114,16 @@ type PrefixExpression struct {
 	Right Expression
 }
 
-func (p *PrefixExpression) isExpression()      {}
-func (p *PrefixExpression) TokenValue() string { return p.Token.Value }
+func (p *PrefixExpression) isExpression() {}
+func (p *PrefixExpression) DebugString(i int) string {
+	var out bytes.Buffer
+	printIndentLine(i, &out)
+	out.WriteString("PrefixExpression")
+	printIndentLine(i, &out)
+	out.WriteString(p.Token.Value)
+	out.WriteString(p.Right.DebugString(i + 1))
+	return out.String()
+}
 func (p *PrefixExpression) String() string {
 	var out bytes.Buffer
 	out.WriteString("(")
@@ -102,6 +137,20 @@ type Identifier struct {
 	Token token.Token
 }
 
-func (i *Identifier) isExpression()      {}
-func (i *Identifier) TokenValue() string { return i.Token.Value }
-func (i *Identifier) String() string     { return i.Token.Value }
+func (id *Identifier) isExpression() {}
+func (id *Identifier) DebugString(i int) string {
+	var out bytes.Buffer
+	printIndentLine(i, &out)
+	out.WriteString("Identifier(")
+	out.WriteString(id.Token.Value)
+	out.WriteString(")")
+	return out.String()
+}
+func (i *Identifier) String() string { return i.Token.Value }
+
+func printIndentLine(i int, b *bytes.Buffer) {
+	b.WriteString("\n")
+	for j := 0; j < i; j += 1 {
+		b.WriteString("\t")
+	}
+}
