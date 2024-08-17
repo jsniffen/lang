@@ -60,6 +60,8 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, error) {
 	var err error
 
 	switch p.curr.Type {
+	case token.LPAREN:
+		left, err = p.parseGroupedExpression()
 	case token.MINUS:
 		left, err = p.parsePrefixExpression()
 	case token.INT:
@@ -96,9 +98,18 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, error) {
 	return left, nil
 }
 
+func (p *Parser) parseGroupedExpression() (ast.Expression, error) {
+	p.advance()
+	exp, err := p.parseExpression(LOWEST)
+	if err == nil && !p.currTokenIs(token.RPAREN) {
+		return exp, fmt.Errorf("Error parsing grouped expression: missing right parenthesis")
+	}
+	p.advance()
+	return exp, err
+}
+
 func (p *Parser) parsePrefixExpression() (ast.Expression, error) {
 	var err error
-
 	exp := &ast.PrefixExpression{Token: p.curr}
 
 	p.advance()
