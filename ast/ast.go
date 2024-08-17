@@ -42,13 +42,40 @@ func (p *Program) String() string {
 	return out.String()
 }
 
-type VariableDeclaration struct {
+type FuncDecl struct {
+	Token token.Token
+	Body  []Statement
+}
+
+func (f *FuncDecl) isStatement() {}
+func (f *FuncDecl) DebugString(i int) string {
+	var out bytes.Buffer
+	printIndentLine(i, &out)
+	out.WriteString("FuncDecl ")
+	out.WriteString(f.Token.Value)
+	for _, s := range f.Body {
+		out.WriteString(s.DebugString(i + 1))
+	}
+	return out.String()
+}
+
+func (f *FuncDecl) String() string {
+	var out bytes.Buffer
+	out.WriteString(f.Token.Value)
+	for _, s := range f.Body {
+		out.WriteString(s.String())
+		out.WriteString("\n")
+	}
+	return out.String()
+}
+
+type VariableDecl struct {
 	Name  token.Token
 	Value Expression
 }
 
-func (v *VariableDeclaration) isStatement() {}
-func (v *VariableDeclaration) DebugString(i int) string {
+func (v *VariableDecl) isStatement() {}
+func (v *VariableDecl) DebugString(i int) string {
 	var out bytes.Buffer
 	printIndentLine(i, &out)
 	out.WriteString("VariableDeclation ")
@@ -57,7 +84,7 @@ func (v *VariableDeclaration) DebugString(i int) string {
 	out.WriteString(v.Value.DebugString(i + 1))
 	return out.String()
 }
-func (v *VariableDeclaration) String() string {
+func (v *VariableDecl) String() string {
 	var out bytes.Buffer
 	out.WriteString(v.Name.Value)
 	out.WriteString(" = ")
@@ -147,6 +174,21 @@ func (id *Identifier) DebugString(i int) string {
 	return out.String()
 }
 func (i *Identifier) String() string { return i.Token.Value }
+
+type StringLiteral struct {
+	Token token.Token
+}
+
+func (s *StringLiteral) isExpression() {}
+func (s *StringLiteral) DebugString(i int) string {
+	var out bytes.Buffer
+	printIndentLine(i, &out)
+	out.WriteString("StringLiteral(")
+	out.WriteString(s.Token.Value)
+	out.WriteString(")")
+	return out.String()
+}
+func (s *StringLiteral) String() string { return s.Token.Value }
 
 func printIndentLine(i int, b *bytes.Buffer) {
 	b.WriteString("\n")

@@ -8,7 +8,10 @@ import (
 
 func main() {
 	input := `
-	x = 1*(2+3)
+	func main() {
+		s = "hello world"
+		x = 1+2/34
+	}
 	`
 	l := lexer.New(input)
 	p := parser.New(l)

@@ -49,7 +49,9 @@ func (p *Parser) ParseProgram() (*ast.Program, error) {
 func (p *Parser) parseStatement() (ast.Statement, error) {
 	switch p.curr.Type {
 	case token.IDENT:
-		return p.parseVariableDeclaration()
+		return p.parseVariableDecl()
+	case token.FUNC:
+		return p.parseFuncDecl()
 	default:
 		return nil, fmt.Errorf("Error parsing statement: invalid token: %v", p.curr)
 	}
@@ -68,6 +70,8 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, error) {
 		left, err = p.parseIntegerLiteral()
 	case token.IDENT:
 		left, err = p.parseIdentifier()
+	case token.STRING:
+		left, err = p.parseStringLiteral()
 	default:
 		err = fmt.Errorf("invalid token: %v", p.curr)
 	}
@@ -154,9 +158,59 @@ func (p *Parser) parseIntegerLiteral() (*ast.IntegerLiteral, error) {
 	return i, nil
 }
 
-func (p *Parser) parseVariableDeclaration() (*ast.VariableDeclaration, error) {
+func (p *Parser) parseStringLiteral() (*ast.StringLiteral, error) {
+	s := &ast.StringLiteral{Token: p.curr}
+	p.advance()
+	return s, nil
+}
+
+func (p *Parser) parseFuncDecl() (*ast.FuncDecl, error) {
 	var err error
-	s := &ast.VariableDeclaration{Name: p.curr}
+	f := &ast.FuncDecl{}
+	p.advance()
+
+	if err = p.assertCurrIs(token.IDENT); err != nil {
+		return f, fmt.Errorf("Error parsing function declaration: %v", err)
+	}
+
+	f.Token = p.curr
+	p.advance()
+
+	if err = p.assertCurrIs(token.LPAREN); err != nil {
+		return f, fmt.Errorf("Error parsing function declaration: %v", err)
+	}
+	p.advance()
+
+	if err = p.assertCurrIs(token.RPAREN); err != nil {
+		return f, fmt.Errorf("Error parsing function declaration: %v", err)
+	}
+	p.advance()
+
+	if err = p.assertCurrIs(token.LBRACE); err != nil {
+		return f, fmt.Errorf("Error parsing function declaration: %v", err)
+	}
+	p.advance()
+
+	f.Body = make([]ast.Statement, 0)
+	for !p.currTokenIs(token.RBRACE) {
+		s, err := p.parseStatement()
+		if err != nil {
+			return f, fmt.Errorf("Error parsing function declaration: %v", err)
+		}
+		f.Body = append(f.Body, s)
+	}
+
+	if err = p.assertCurrIs(token.RBRACE); err != nil {
+		return f, fmt.Errorf("Error parsing function declaration: %v", err)
+	}
+	p.advance()
+
+	return f, nil
+}
+
+func (p *Parser) parseVariableDecl() (*ast.VariableDecl, error) {
+	var err error
+	s := &ast.VariableDecl{Name: p.curr}
 	p.advance()
 
 	if !p.currTokenIs(token.ASSIGN) {
@@ -179,6 +233,14 @@ func (p *Parser) parseVariableDeclaration() (*ast.VariableDeclaration, error) {
 func (p *Parser) advance() {
 	p.curr = p.next
 	p.next = p.l.NextToken()
+}
+
+func (p *Parser) assertCurrIs(t token.TokenType) error {
+	if p.curr.Type == t {
+		return nil
+	} else {
+		return fmt.Errorf("expected %v, got %v", t, p.curr.Type)
+	}
 }
 
 func (p *Parser) currTokenIs(t token.TokenType) bool {
