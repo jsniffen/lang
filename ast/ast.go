@@ -81,3 +81,11 @@ func (i *InfixExpression) String() string {
 	out.WriteString(")")
 	return out.String()
 }
+
+type Identifier struct {
+	Token token.Token
+}
+
+func (i *Identifier) isExpression()      {}
+func (i *Identifier) TokenValue() string { return i.Token.Value }
+func (i *Identifier) String() string     { return i.Token.Value }

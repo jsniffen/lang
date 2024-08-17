@@ -38,6 +38,8 @@ func (l *Lexer) NextToken() token.Token {
 		tok = token.Token{token.SEMICOLON, string(l.ch)}
 	case '=':
 		tok = token.Token{token.ASSIGN, string(l.ch)}
+	case '/':
+		tok = token.Token{token.SLASH, string(l.ch)}
 	case '"':
 		value := l.eatString()
 		return token.Token{token.STRING, value}

@@ -78,3 +78,31 @@ func TestLexInt(t *testing.T) {
 		t.Fatalf("Only produced %d token(s), wanted: %d", testIndex, len(tests))
 	}
 }
+
+func TestLexMath(t *testing.T) {
+	input := "1 + 2 * 3 / 4"
+	lexer := New(input)
+
+	tests := []token.Token{
+		token.Token{token.INT, "1"},
+		token.Token{token.PLUS, "+"},
+		token.Token{token.INT, "2"},
+		token.Token{token.ASTERISK, "*"},
+		token.Token{token.INT, "3"},
+		token.Token{token.SLASH, "/"},
+		token.Token{token.INT, "4"},
+	}
+	testIndex := 0
+	for got := lexer.NextToken(); got.Type != token.EOF; got = lexer.NextToken() {
+		want := tests[testIndex]
+
+		if got.Type != want.Type || got.Value != want.Value {
+			t.Fatalf("[%d] got: %v, want: %v", testIndex, got, want)
+		}
+		testIndex += 1
+	}
+
+	if testIndex < len(tests) {
+		t.Fatalf("Only produced %d token(s), wanted: %d", testIndex, len(tests))
+	}
+}

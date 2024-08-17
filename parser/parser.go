@@ -62,6 +62,8 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, error) {
 	switch p.curr.Type {
 	case token.INT:
 		left, err = p.parseIntegerLiteral()
+	case token.IDENT:
+		left, err = p.parseIdentifier()
 	default:
 		err = fmt.Errorf("invalid token: %v", p.curr)
 	}
@@ -101,6 +103,12 @@ func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, erro
 	}
 
 	return exp, nil
+}
+
+func (p *Parser) parseIdentifier() (*ast.Identifier, error) {
+	id := &ast.Identifier{Token: p.curr}
+	p.advance()
+	return id, nil
 }
 
 func (p *Parser) parseIntegerLiteral() (*ast.IntegerLiteral, error) {

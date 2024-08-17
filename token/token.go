@@ -17,6 +17,7 @@ const (
 	RETURN    = "RETURN"
 	RPAREN    = ")"
 	SEMICOLON = ";"
+	SLASH     = "/"
 	STRING    = "STRING"
 )
 
