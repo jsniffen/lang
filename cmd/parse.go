@@ -25,4 +25,5 @@ func main() {
 		p.PrintErrors()
 	}
 	fmt.Println(prog.DebugString(0))
+	fmt.Println(prog.String())
 }

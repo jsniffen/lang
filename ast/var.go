@@ -6,43 +6,54 @@ import (
 )
 
 type Var struct {
-	Token token.Token
-	Name  string
-	Type  string
+	Name token.Token
 }
 
 func (v *Var) isExpression()  {}
-func (v *Var) String() string { return v.Name }
+func (v *Var) String() string { return v.Name.Value }
 func (v *Var) DebugString(i int) string {
 	var out bytes.Buffer
 	printIndentLine(i, &out)
 	out.WriteString("Var ")
-	out.WriteString(v.Name)
-	if v.Type != "" {
-		out.WriteString(" ")
-		out.WriteString(v.Type)
-	}
+	out.WriteString(v.String())
 	return out.String()
 }
 
 type VarDecl struct {
-	Name  token.Token
-	Type  token.Token
-	Value Expression
+	Name    token.Token
+	Type    token.Token
+	Pointer bool
+	Value   Expression
 }
 
-func (vd *VarDecl) isStatement()   {}
-func (vd *VarDecl) String() string { return vd.Name.Value }
+func (vd *VarDecl) isStatement() {}
+func (vd *VarDecl) String() string {
+	var out bytes.Buffer
+	out.WriteString(vd.Name.Value)
+	if vd.Type.Value != "" {
+		out.WriteString(" ")
+		if vd.Pointer {
+			out.WriteString("*")
+		}
+		out.WriteString(vd.Type.Value)
+	}
+	return out.String()
+}
 func (vd *VarDecl) DebugString(i int) string {
 	var out bytes.Buffer
 	printIndentLine(i, &out)
 	out.WriteString("VarDecl ")
 	out.WriteString(vd.String())
-	out.WriteString(" = ")
 	if vd.Type.Value != "" {
 		out.WriteString(" ")
+		if vd.Pointer {
+			out.WriteString("*")
+		}
 		out.WriteString(vd.Type.Value)
 	}
-	out.WriteString(vd.Value.DebugString(i + 1))
+	if vd.Value != nil {
+		out.WriteString(" = ")
+		out.WriteString(vd.Value.DebugString(i + 1))
+	}
 	return out.String()
 }

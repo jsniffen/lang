@@ -74,6 +74,10 @@ func (p *Parser) parseStatement(level int) (ast.Statement, bool) {
 				return p.parseFuncCall()
 			}
 		case token.ASSIGN:
+			fallthrough
+		case token.IDENT:
+			fallthrough
+		case token.ASTERISK:
 			return p.parseVarDecl()
 		default:
 			p.Error(p.next, "invalid token: '%s'", p.next.Value)
@@ -97,7 +101,7 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
 	case token.INT:
 		left, ok = p.parseIntegerLiteral()
 	case token.IDENT:
-		left, ok = p.parseIdentifier()
+		left, ok = p.parseVar()
 	case token.STRING:
 		left, ok = p.parseStringLiteral()
 	default:
@@ -169,8 +173,8 @@ func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, bool
 	return exp, true
 }
 
-func (p *Parser) parseIdentifier() (*ast.Identifier, bool) {
-	id := &ast.Identifier{Token: p.curr}
+func (p *Parser) parseVar() (*ast.Var, bool) {
+	id := &ast.Var{p.curr}
 	p.advance()
 	return id, true
 }
@@ -210,9 +214,9 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	}
 	p.advance()
 
-	f.Params = make([]*ast.FuncParam, 0)
+	f.Params = make([]*ast.VarDecl, 0)
 	for !p.currTokenIs(token.RPAREN) {
-		param, ok := p.parseFuncParam()
+		param, ok := p.parseVarDecl()
 		if !ok {
 			return nil, false
 		}
@@ -320,21 +324,25 @@ func (p *Parser) parseVarDecl() (*ast.VarDecl, bool) {
 	vd := &ast.VarDecl{Name: p.curr}
 	p.advance()
 
+	if p.currTokenIs(token.ASTERISK) {
+		vd.Pointer = true
+		p.advance()
+	}
+
 	if p.currTokenIs(token.IDENT) {
 		vd.Type = p.curr
 		p.advance()
 	}
 
-	if !p.checkCurrIs(token.ASSIGN) {
-		return nil, false
-	}
-	p.advance()
+	if p.currTokenIs(token.ASSIGN) {
+		p.advance()
 
-	exp, ok := p.parseExpression(LOWEST)
-	if !ok {
-		return nil, false
+		exp, ok := p.parseExpression(LOWEST)
+		if !ok {
+			return nil, false
+		}
+		vd.Value = exp
 	}
-	vd.Value = exp
 
 	return vd, true
 }

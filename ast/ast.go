@@ -42,29 +42,6 @@ func (p *Program) String() string {
 	return out.String()
 }
 
-// type VarDecl struct {
-// Name  token.Token
-// Value Expression
-// }
-//
-// func (v *VarDecl) isStatement() {}
-// func (v *VarDecl) DebugString(i int) string {
-// var out bytes.Buffer
-// printIndentLine(i, &out)
-// out.WriteString("VarDecl ")
-// out.WriteString(v.Name.Value)
-// out.WriteString(" =")
-// out.WriteString(v.Value.DebugString(i + 1))
-// return out.String()
-// }
-// func (v *VarDecl) String() string {
-// var out bytes.Buffer
-// out.WriteString(v.Name.Value)
-// out.WriteString(" = ")
-// out.WriteString(v.Value.String())
-// return out.String()
-// }
-
 type IntegerLiteral struct {
 	Token token.Token
 	Value int64
@@ -132,21 +109,6 @@ func (p *PrefixExpression) String() string {
 	out.WriteString(")")
 	return out.String()
 }
-
-type Identifier struct {
-	Token token.Token
-}
-
-func (id *Identifier) isExpression() {}
-func (id *Identifier) DebugString(i int) string {
-	var out bytes.Buffer
-	printIndentLine(i, &out)
-	out.WriteString("Identifier(")
-	out.WriteString(id.Token.Value)
-	out.WriteString(")")
-	return out.String()
-}
-func (i *Identifier) String() string { return i.Token.Value }
 
 type StringLiteral struct {
 	Token token.Token

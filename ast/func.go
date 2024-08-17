@@ -27,7 +27,7 @@ func (fp *FuncParam) DebugString(i int) string {
 
 type FuncDecl struct {
 	Token  token.Token
-	Params []*FuncParam
+	Params []*VarDecl
 	Body   []Statement
 }
 
@@ -37,15 +37,11 @@ func (f *FuncDecl) DebugString(i int) string {
 	printIndentLine(i, &out)
 	out.WriteString("FuncDecl ")
 	out.WriteString(f.Token.Value)
-	printIndentLine(i+1, &out)
-	out.WriteString("Params")
 	for _, p := range f.Params {
-		out.WriteString(p.DebugString(i + 2))
+		out.WriteString(p.DebugString(i + 1))
 	}
-	printIndentLine(i+1, &out)
-	out.WriteString("Body")
 	for _, s := range f.Body {
-		out.WriteString(s.DebugString(i + 2))
+		out.WriteString(s.DebugString(i + 1))
 	}
 	return out.String()
 }

@@ -1,6 +1,5 @@
-puts(s u8)
-x = 1 + 2
+puts(s *u8)
 
 main() {
-	puts("Hello world", x)
+	puts("Hello world")
 }
