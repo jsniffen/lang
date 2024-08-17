@@ -233,6 +233,11 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	}
 	p.advance()
 
+	if p.currTokenIs(token.IDENT) {
+		f.ReturnType = p.curr
+		p.advance()
+	}
+
 	if !p.currTokenIs(token.LBRACE) {
 		return f, true
 	}
@@ -259,25 +264,6 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	p.advance()
 
 	return f, true
-}
-
-func (p *Parser) parseFuncParam() (*ast.FuncParam, bool) {
-	fp := &ast.FuncParam{}
-
-	if ok, msg := p.assertCurrIs(token.IDENT); !ok {
-		p.Error(p.curr, msg)
-		return nil, false
-	}
-	fp.Type = p.curr
-	p.advance()
-
-	if p.currTokenIs(token.IDENT) {
-		fp.Name = fp.Type
-		fp.Type = p.curr
-		p.advance()
-	}
-
-	return fp, true
 }
 
 func (p *Parser) parseFuncCall() (*ast.FuncCall, bool) {

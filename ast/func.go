@@ -5,40 +5,28 @@ import (
 	"lang/token"
 )
 
-type FuncParam struct {
-	Name token.Token
-	Type token.Token
-}
-
-func (fp *FuncParam) isStatement() {}
-func (fp *FuncParam) String() string {
-	var out bytes.Buffer
-	out.WriteString(fp.Name.Value)
-	out.WriteString(" ")
-	out.WriteString(fp.Type.Value)
-	return out.String()
-}
-func (fp *FuncParam) DebugString(i int) string {
-	var out bytes.Buffer
-	printIndentLine(i, &out)
-	out.WriteString(fp.String())
-	return out.String()
-}
-
 type FuncDecl struct {
-	Token  token.Token
-	Params []*VarDecl
-	Body   []Statement
+	Token      token.Token
+	Params     []*VarDecl
+	Body       []Statement
+	ReturnType token.Token
 }
 
 func (f *FuncDecl) isStatement() {}
+
 func (f *FuncDecl) DebugString(i int) string {
 	var out bytes.Buffer
 	printIndentLine(i, &out)
 	out.WriteString("FuncDecl ")
 	out.WriteString(f.Token.Value)
+	out.WriteString("(")
 	for _, p := range f.Params {
-		out.WriteString(p.DebugString(i + 1))
+		out.WriteString(p.String())
+	}
+	out.WriteString(")")
+	if f.ReturnType.Value != "" {
+		out.WriteString(" -> ")
+		out.WriteString(f.ReturnType.Value)
 	}
 	for _, s := range f.Body {
 		out.WriteString(s.DebugString(i + 1))
@@ -75,6 +63,16 @@ type FuncCall struct {
 
 func (f *FuncCall) isExpression() {}
 func (f *FuncCall) isStatement()  {}
+
+func (f *FuncCall) CodeGen() string {
+	var out bytes.Buffer
+	out.WriteString("call ")
+	out.WriteString(f.Token.Value)
+	out.WriteString("(")
+	out.WriteString(")")
+	return out.String()
+}
+
 func (f *FuncCall) DebugString(i int) string {
 	var out bytes.Buffer
 	printIndentLine(i, &out)
@@ -85,6 +83,7 @@ func (f *FuncCall) DebugString(i int) string {
 	}
 	return out.String()
 }
+
 func (f *FuncCall) String() string {
 	var out bytes.Buffer
 	out.WriteString(f.Token.Value)

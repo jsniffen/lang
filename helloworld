@@ -1,4 +1,4 @@
-puts(s *u8)
+puts(s *u8) i32
 
 main() {
 	puts("Hello world")

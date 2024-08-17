@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"lang/codegen"
 	"lang/lexer"
 	"lang/parser"
 )
@@ -25,5 +26,9 @@ func main() {
 		p.PrintErrors()
 	}
 	fmt.Println(prog.DebugString(0))
+	fmt.Println("---")
 	fmt.Println(prog.String())
+
+	g := codegen.New(prog)
+	fmt.Println(g.Generate())
 }

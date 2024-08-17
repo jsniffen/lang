@@ -9,8 +9,9 @@ type Var struct {
 	Name token.Token
 }
 
-func (v *Var) isExpression()  {}
-func (v *Var) String() string { return v.Name.Value }
+func (v *Var) isExpression()   {}
+func (v *Var) CodeGen() string { return "" }
+func (v *Var) String() string  { return v.Name.Value }
 func (v *Var) DebugString(i int) string {
 	var out bytes.Buffer
 	printIndentLine(i, &out)
@@ -27,6 +28,18 @@ type VarDecl struct {
 }
 
 func (vd *VarDecl) isStatement() {}
+func (vd *VarDecl) CodeGen() string {
+	var out bytes.Buffer
+	out.WriteString(vd.Name.Value)
+	if vd.Type.Value != "" {
+		out.WriteString(" ")
+		out.WriteString(vd.Type.Value)
+		if vd.Pointer {
+			out.WriteString("*")
+		}
+	}
+	return out.String()
+}
 func (vd *VarDecl) String() string {
 	var out bytes.Buffer
 	out.WriteString(vd.Name.Value)
@@ -44,13 +57,6 @@ func (vd *VarDecl) DebugString(i int) string {
 	printIndentLine(i, &out)
 	out.WriteString("VarDecl ")
 	out.WriteString(vd.String())
-	if vd.Type.Value != "" {
-		out.WriteString(" ")
-		if vd.Pointer {
-			out.WriteString("*")
-		}
-		out.WriteString(vd.Type.Value)
-	}
 	if vd.Value != nil {
 		out.WriteString(" = ")
 		out.WriteString(vd.Value.DebugString(i + 1))
