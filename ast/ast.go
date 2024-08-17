@@ -1,6 +1,12 @@
 package ast
 
+import (
+	"bytes"
+	"lang/token"
+)
+
 type Node interface {
+	TokenValue() string
 	String() string
 }
 
@@ -18,21 +24,60 @@ type Program struct {
 	Statements []Statement
 }
 
-type IntegerLiteral struct {
-	Value string
+func (p *Program) TokenValue() string {
+	if len(p.Statements) == 0 {
+		return ""
+	}
+	return p.Statements[0].TokenValue()
 }
 
-func (i *IntegerLiteral) String() string {
-	return "IntegerLiteral{" + i.Value + "}"
+func (p *Program) String() string {
+	var out bytes.Buffer
+	for _, s := range p.Statements {
+		out.WriteString(s.String())
+		out.WriteString("\n")
+	}
+	return out.String()
 }
-func (i *IntegerLiteral) isExpression() {}
 
 type VariableDeclaration struct {
-	Identifier string
-	Expression Expression
+	Name  token.Token
+	Value Expression
 }
 
+func (v *VariableDeclaration) isStatement()       {}
+func (v *VariableDeclaration) TokenValue() string { return v.Name.Value }
 func (v *VariableDeclaration) String() string {
-	return "VariableDeclaration{" + v.Identifier + " = " + v.Expression.String() + "}"
+	var out bytes.Buffer
+	out.WriteString(v.TokenValue())
+	out.WriteString(" = ")
+	out.WriteString(v.Value.String())
+	return out.String()
 }
-func (v *VariableDeclaration) isStatement() {}
+
+type IntegerLiteral struct {
+	Token token.Token
+	Value int64
+}
+
+func (i *IntegerLiteral) isExpression()      {}
+func (i *IntegerLiteral) TokenValue() string { return i.Token.Value }
+func (i *IntegerLiteral) String() string     { return i.Token.Value }
+
+type InfixExpression struct {
+	Token token.Token
+	Left  Expression
+	Right Expression
+}
+
+func (i *InfixExpression) isExpression()      {}
+func (i *InfixExpression) TokenValue() string { return i.Token.Value }
+func (i *InfixExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("(")
+	out.WriteString(i.Left.String())
+	out.WriteString(" " + i.Token.Value + " ")
+	out.WriteString(i.Right.String())
+	out.WriteString(")")
+	return out.String()
+}

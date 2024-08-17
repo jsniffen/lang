@@ -7,7 +7,12 @@ import (
 )
 
 func main() {
-	l := lexer.New("x = 1")
+	input := `
+	x = 1 * 2 + 3
+	y = 2;
+	z = 3;
+	`
+	l := lexer.New(input)
 	p := parser.New(l)
 
 	prog, err := p.ParseProgram()
@@ -15,7 +20,5 @@ func main() {
 		panic(err)
 	}
 
-	for _, s := range prog.Statements {
-		fmt.Println(s)
-	}
+	fmt.Println(prog)
 }
