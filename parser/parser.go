@@ -8,7 +8,7 @@ import (
 )
 
 type Parser struct {
-	pos  token.Token
+	curr token.Token
 	next token.Token
 	l    *lexer.Lexer
 }
@@ -16,16 +16,17 @@ type Parser struct {
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{l: l}
 	p.advance()
+	p.advance()
 	return p
 }
 
 func (p *Parser) ParseProgram() (*ast.Program, error) {
 	prog := &ast.Program{make([]ast.Statement, 0)}
 
-	for p.pos.Type != token.EOF {
+	for p.curr.Type != token.EOF {
 		var statement ast.Statement
 		var err error
-		if p.pos.Type == token.IDENT && p.next.Type == token.ASSIGN {
+		if p.curr.Type == token.IDENT && p.next.Type == token.ASSIGN {
 			statement, err = p.parseVariableDeclaration()
 			if err != nil {
 				return prog, err
@@ -40,7 +41,7 @@ func (p *Parser) ParseProgram() (*ast.Program, error) {
 }
 
 func (p *Parser) parseExpression() (ast.Expression, error) {
-	if p.pos.Type == token.INT {
+	if p.curr.Type == token.INT {
 		return p.parseIntegerLiteral()
 	}
 
@@ -49,7 +50,7 @@ func (p *Parser) parseExpression() (ast.Expression, error) {
 
 func (p *Parser) parseIntegerLiteral() (*ast.IntegerLiteral, error) {
 	node := &ast.IntegerLiteral{}
-	node.Value = p.pos.Value
+	node.Value = p.curr.Value
 	p.advance()
 	return node, nil
 }
@@ -57,7 +58,7 @@ func (p *Parser) parseIntegerLiteral() (*ast.IntegerLiteral, error) {
 func (p *Parser) parseVariableDeclaration() (*ast.VariableDeclaration, error) {
 	node := &ast.VariableDeclaration{}
 
-	node.Identifier = p.pos.Value
+	node.Identifier = p.curr.Value
 
 	p.advance()
 	p.advance()
@@ -72,10 +73,6 @@ func (p *Parser) parseVariableDeclaration() (*ast.VariableDeclaration, error) {
 }
 
 func (p *Parser) advance() {
-	if p.next.Type == token.EOF {
-		p.pos = p.next
-	} else {
-		p.pos = p.next
-		p.next = p.l.NextToken()
-	}
+	p.curr = p.next
+	p.next = p.l.NextToken()
 }
