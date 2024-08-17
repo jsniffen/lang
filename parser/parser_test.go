@@ -16,7 +16,7 @@ func TestParser(t *testing.T) {
 	}
 
 	statements := []string{
-		"VariableDeclaration{x = IntegerLiteral{1}}",
+		"x = 1",
 	}
 
 	if len(prog.Statements) != len(statements) {
