@@ -1,0 +1,11 @@
+program := {statement}
+
+statement := function | variable | struct
+
+struct := "struct" identifier "{" {variable} "}"
+
+variable := identifier
+
+function := "func", ident, "(", {variable, ","} ")" {variable}
+
+identifier := letter {letter}

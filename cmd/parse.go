@@ -15,7 +15,7 @@ const TestInput = `
 `
 
 func main() {
-	l, err := lexer.FromFile("helloworld")
+	l, err := lexer.FromFile("examples/testfile")
 	if err != nil {
 		panic(err)
 	}

@@ -21,12 +21,14 @@ const (
 	SEMICOLON = ";"
 	SLASH     = "/"
 	STRING    = "STRING"
+	VAR       = "VAR"
 )
 
 var KeywordsMap = map[string]TokenType{
 	"extern": EXTERN,
 	"func":   FUNC,
 	"return": RETURN,
+	"var":    VAR,
 }
 
 type Token struct {

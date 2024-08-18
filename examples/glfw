@@ -1,0 +1,50 @@
+include glfw
+
+struct  {
+	x, y f32
+}
+
+struct List {
+	type Type
+	items []type
+}
+
+List itemskk
+
+type Animal must {
+	speak i32
+}
+
+func Bark(a Animal) {
+	print(a.speak)
+}
+
+struct Frame {
+	mouse_position Position
+}
+
+func maybeSum(a, b int) int, bool {
+}
+
+func test()
+
+x, y int
+
+
+func main() i32 {
+	s, ok = maybeSum(1, 2)
+
+	if glfwInit() == 0 {
+		return 1
+	}
+	defer glfwTerminate()
+
+	var a, b i32
+
+	var w = glfw
+
+	w = glfwCreateWindow(640, 480, "Title", nil, nil)
+	for !glfwWindowShouldClose(window) {
+		glfwSwapBuffers()
+	}
+}

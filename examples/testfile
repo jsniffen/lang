@@ -1,0 +1,8 @@
+var s = "hello world"
+
+func puts(s *u8)
+
+func main() {
+	x = 2
+	puts()
+}

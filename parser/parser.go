@@ -19,12 +19,6 @@ const (
 	FUNCCALL
 )
 
-const (
-	_ int = iota
-	PROGRAM
-	INNER
-)
-
 type Parser struct {
 	curr   token.Token
 	next   token.Token
@@ -43,7 +37,7 @@ func (p *Parser) ParseProgram() (*ast.Program, bool) {
 	prog := &ast.Program{make([]ast.Statement, 0)}
 
 	for !p.currTokenIs(token.EOF) {
-		s, ok := p.parseStatement(PROGRAM)
+		s, ok := p.parseProgramStatement()
 		if !ok {
 			return prog, false
 		}
@@ -53,26 +47,32 @@ func (p *Parser) ParseProgram() (*ast.Program, bool) {
 	return prog, true
 }
 
-func (p *Parser) HasErrors() bool {
-	return len(p.errors) > 0
-}
-
 func (p *Parser) PrintErrors() {
 	for _, err := range p.errors {
 		fmt.Println(err)
 	}
 }
 
-func (p *Parser) parseStatement(level int) (ast.Statement, bool) {
+func (p *Parser) parseProgramStatement() (ast.Statement, bool) {
 	switch p.curr.Type {
+	case token.FUNC:
+		return p.parseFuncDecl()
+	case token.VAR:
+		return p.parseVarDecl()
+	default:
+		p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
+		return nil, false
+	}
+}
+
+func (p *Parser) parseFuncStatement() (ast.Statement, bool) {
+	switch p.curr.Type {
+	case token.VAR:
+		return p.parseVarDecl()
 	case token.IDENT:
 		switch p.next.Type {
 		case token.LPAREN:
-			if level == PROGRAM {
-				return p.parseFuncDecl()
-			} else {
-				return p.parseFuncCall()
-			}
+			return p.parseFuncCall()
 		case token.ASSIGN:
 			fallthrough
 		case token.IDENT:
@@ -198,6 +198,13 @@ func (p *Parser) parseStringLiteral() (*ast.StringLiteral, bool) {
 }
 
 func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
+	var ok bool
+	ok = p.checkCurrIs(token.FUNC)
+	if !ok {
+		return nil, false
+	}
+	p.advance()
+
 	f := &ast.FuncDecl{}
 
 	if ok, msg := p.assertCurrIs(token.IDENT); !ok {
@@ -250,7 +257,7 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 
 	f.Body = make([]ast.Statement, 0)
 	for !p.currTokenIs(token.RBRACE) {
-		s, ok := p.parseStatement(INNER)
+		s, ok := p.parseFuncStatement()
 		if !ok {
 			return nil, false
 		}
@@ -303,6 +310,10 @@ func (p *Parser) parseFuncCall() (*ast.FuncCall, bool) {
 }
 
 func (p *Parser) parseVarDecl() (*ast.VarDecl, bool) {
+	if p.currTokenIs(token.VAR) {
+		p.advance()
+	}
+
 	if !p.checkCurrIs(token.IDENT) {
 		return nil, false
 	}

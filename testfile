@@ -1,5 +1,0 @@
-func puts(s u8)
-
-func main() {
-	puts("Hello world")
-}
