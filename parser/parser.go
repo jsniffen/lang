@@ -136,17 +136,21 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
 }
 
 func (p *Parser) parseGroupedExpression() (ast.Expression, bool) {
+	if !p.assertCurrIs(token.RPAREN) {
+		return nil, false
+	}
 	p.advance()
+
 	exp, ok := p.parseExpression(LOWEST)
 	if !ok {
 		return nil, false
 	}
 
-	if ok, msg := p.assertCurrIs(token.LPAREN); !ok {
-		p.Error(p.curr, msg)
+	if !p.assertCurrIs(token.LPAREN) {
 		return nil, false
 	}
 	p.advance()
+
 	return exp, true
 }
 
@@ -199,7 +203,7 @@ func (p *Parser) parseStringLiteral() (*ast.StringLiteral, bool) {
 
 func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	var ok bool
-	ok = p.checkCurrIs(token.FUNC)
+	ok = p.assertCurrIs(token.FUNC)
 	if !ok {
 		return nil, false
 	}
@@ -207,16 +211,14 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 
 	f := &ast.FuncDecl{}
 
-	if ok, msg := p.assertCurrIs(token.IDENT); !ok {
-		p.Error(p.curr, msg)
+	if !p.assertCurrIs(token.IDENT) {
 		return nil, false
 	}
 
 	f.Token = p.curr
 	p.advance()
 
-	if ok, msg := p.assertCurrIs(token.LPAREN); !ok {
-		p.Error(p.curr, msg)
+	if !p.assertCurrIs(token.LPAREN) {
 		return nil, false
 	}
 	p.advance()
@@ -234,8 +236,7 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 		}
 	}
 
-	if ok, msg := p.assertCurrIs(token.RPAREN); !ok {
-		p.Error(p.curr, msg)
+	if !p.assertCurrIs(token.RPAREN) {
 		return nil, false
 	}
 	p.advance()
@@ -249,8 +250,7 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 		return f, true
 	}
 
-	if ok, msg := p.assertCurrIs(token.LBRACE); !ok {
-		p.Error(p.curr, msg)
+	if !p.assertCurrIs(token.LBRACE) {
 		return nil, false
 	}
 	p.advance()
@@ -264,8 +264,7 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 		f.Body = append(f.Body, s)
 	}
 
-	if ok, msg := p.assertCurrIs(token.RBRACE); !ok {
-		p.Error(p.curr, msg)
+	if !p.assertCurrIs(token.RBRACE) {
 		return nil, false
 	}
 	p.advance()
@@ -276,14 +275,12 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 func (p *Parser) parseFuncCall() (*ast.FuncCall, bool) {
 	fc := &ast.FuncCall{Token: p.curr, Args: make([]ast.Expression, 0)}
 
-	if ok, msg := p.assertCurrIs(token.IDENT); !ok {
-		p.Error(p.curr, msg)
+	if !p.assertCurrIs(token.IDENT) {
 		return nil, false
 	}
 	p.advance()
 
-	if ok, msg := p.assertCurrIs(token.LPAREN); !ok {
-		p.Error(p.curr, msg)
+	if !p.assertCurrIs(token.LPAREN) {
 		return nil, false
 	}
 	p.advance()
@@ -300,8 +297,7 @@ func (p *Parser) parseFuncCall() (*ast.FuncCall, bool) {
 		}
 	}
 
-	if ok, msg := p.assertCurrIs(token.RPAREN); !ok {
-		p.Error(p.curr, msg)
+	if !p.assertCurrIs(token.RPAREN) {
 		return nil, false
 	}
 	p.advance()
@@ -314,7 +310,7 @@ func (p *Parser) parseVarDecl() (*ast.VarDecl, bool) {
 		p.advance()
 	}
 
-	if !p.checkCurrIs(token.IDENT) {
+	if !p.assertCurrIs(token.IDENT) {
 		return nil, false
 	}
 
@@ -349,20 +345,12 @@ func (p *Parser) advance() {
 	p.next = p.l.NextToken()
 }
 
-func (p *Parser) checkCurrIs(t token.TokenType) bool {
+func (p *Parser) assertCurrIs(t token.TokenType) bool {
 	if p.curr.Type == t {
 		return true
 	} else {
 		p.Error(p.curr, fmt.Sprintf("expected %v, got %v", t, p.curr.Type))
 		return false
-	}
-}
-
-func (p *Parser) assertCurrIs(t token.TokenType) (bool, string) {
-	if p.curr.Type == t {
-		return true, ""
-	} else {
-		return false, fmt.Sprintf("expected %v, got %v", t, p.curr.Type)
 	}
 }
 
