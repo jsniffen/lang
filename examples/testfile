@@ -1,8 +1,7 @@
-var s = "hello world"
+var s = "hello world\0"
 
-func puts(s *u8)
+func puts(s *i8) i32
 
 func main() {
-	x = 2
-	puts()
+	puts(s)
 }

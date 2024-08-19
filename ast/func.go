@@ -35,6 +35,7 @@ func (f *FuncDecl) DebugString(i int) string {
 }
 func (f *FuncDecl) String() string {
 	var out bytes.Buffer
+	out.WriteString("func ")
 	out.WriteString(f.Token.Value)
 	out.WriteString("(")
 	for i, p := range f.Params {

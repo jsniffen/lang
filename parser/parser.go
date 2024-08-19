@@ -37,11 +37,22 @@ func (p *Parser) ParseProgram() (*ast.Program, bool) {
 	prog := &ast.Program{make([]ast.Statement, 0)}
 
 	for !p.currTokenIs(token.EOF) {
-		s, ok := p.parseProgramStatement()
+		var stmt ast.Statement
+		var ok bool
+
+		switch p.curr.Type {
+		case token.FUNC:
+			stmt, ok = p.parseFuncDecl()
+		default:
+			p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
+			ok = false
+		}
+
 		if !ok {
 			return prog, false
 		}
-		prog.Statements = append(prog.Statements, s)
+
+		prog.Statements = append(prog.Statements, stmt)
 	}
 
 	return prog, true
@@ -53,22 +64,12 @@ func (p *Parser) PrintErrors() {
 	}
 }
 
-func (p *Parser) parseProgramStatement() (ast.Statement, bool) {
-	switch p.curr.Type {
-	case token.FUNC:
-		return p.parseFuncDecl()
-	case token.VAR:
-		return p.parseVarDecl()
-	default:
-		p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
-		return nil, false
-	}
-}
-
 func (p *Parser) parseFuncStatement() (ast.Statement, bool) {
 	switch p.curr.Type {
 	case token.VAR:
 		return p.parseVarDecl()
+	case token.RETURN:
+		return p.parseReturn()
 	case token.IDENT:
 		switch p.next.Type {
 		case token.LPAREN:
@@ -87,6 +88,22 @@ func (p *Parser) parseFuncStatement() (ast.Statement, bool) {
 		p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
 		return nil, false
 	}
+}
+
+func (p *Parser) parseReturn() (*ast.Return, bool) {
+	if !p.assertCurrIs(token.RETURN) {
+		return nil, false
+	}
+	ret := &ast.Return{Token: p.curr}
+	p.advance()
+
+	e, ok := p.parseExpression(LOWEST)
+	if !ok {
+		return nil, false
+	}
+	ret.Value = e
+
+	return ret, true
 }
 
 func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
@@ -181,6 +198,44 @@ func (p *Parser) parseVar() (*ast.Var, bool) {
 	id := &ast.Var{p.curr}
 	p.advance()
 	return id, true
+}
+
+func (p *Parser) parseGlobalVarDecl() (*ast.VarDecl, bool) {
+	if !p.assertCurrIs(token.VAR) {
+		return nil, false
+	}
+	p.advance()
+
+	vd := &ast.VarDecl{Global: true}
+
+	if !p.assertCurrIs(token.IDENT) {
+		return nil, false
+	}
+	vd.Name = p.curr
+	p.advance()
+
+	if p.currTokenIs(token.ASTERISK) {
+		vd.Pointer = true
+		p.advance()
+	}
+
+	if p.currTokenIs(token.IDENT) {
+		vd.Type = p.curr
+		p.advance()
+	}
+
+	if p.currTokenIs(token.ASSIGN) {
+		p.advance()
+
+		exp, ok := p.parseExpression(LOWEST)
+		if !ok {
+			return nil, false
+		}
+
+		vd.Value = exp
+	}
+
+	return vd, true
 }
 
 func (p *Parser) parseIntegerLiteral() (*ast.IntegerLiteral, bool) {

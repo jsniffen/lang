@@ -25,6 +25,7 @@ type VarDecl struct {
 	Type    token.Token
 	Pointer bool
 	Value   Expression
+	Global  bool
 }
 
 func (vd *VarDecl) isStatement() {}

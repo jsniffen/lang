@@ -103,6 +103,28 @@ func (s *StringLiteral) DebugString(i int) string {
 }
 func (s *StringLiteral) String() string { return s.Token.Value }
 
+type Return struct {
+	Token token.Token
+	Value Expression
+}
+
+func (r *Return) isStatement() {}
+func (r *Return) String() string {
+	var out bytes.Buffer
+	out.WriteString(r.Token.Value)
+	out.WriteString(" ")
+	out.WriteString(r.Value.String())
+	return out.String()
+}
+func (r *Return) DebugString(i int) string {
+	var out bytes.Buffer
+	printIndentLine(i, &out)
+	out.WriteString(r.String())
+	out.WriteString(" ")
+	out.WriteString(r.Value.DebugString(i + 1))
+	return out.String()
+}
+
 func printIndentLine(i int, b *bytes.Buffer) {
 	b.WriteString("\n")
 	for j := 0; j < i; j += 1 {
