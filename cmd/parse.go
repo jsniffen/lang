@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"lang/codegen"
 	"lang/lexer"
 	"lang/parser"
 	"os"
@@ -16,12 +15,10 @@ const TestInput = `
 `
 
 func main() {
-	inputFile := ""
-	if len(os.Args) < 2 {
-		fmt.Printf("input file required")
-		return
+	inputFile := "examples/testfile"
+	if len(os.Args) > 1 {
+		inputFile = os.Args[1]
 	}
-	inputFile = os.Args[1]
 	outputFile := ""
 	if len(os.Args) > 2 {
 		outputFile = os.Args[2]
@@ -41,8 +38,7 @@ func main() {
 	fmt.Println(prog.String())
 	fmt.Println("---")
 
-	g := codegen.New(prog)
-	code := g.Generate()
+	code := prog.CodeGen()
 	if outputFile == "" {
 		fmt.Println(code)
 	} else {

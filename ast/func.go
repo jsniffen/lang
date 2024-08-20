@@ -9,45 +9,81 @@ type FuncDecl struct {
 	Token      token.Token
 	Params     []*VarDecl
 	Body       []Statement
-	ReturnType token.Token
+	ReturnType *Type
 }
 
-func (f *FuncDecl) isStatement() {}
+func (fd *FuncDecl) isStatement() {}
 
-func (f *FuncDecl) DebugString(i int) string {
+func (fd *FuncDecl) CodeGen() string {
+	var out bytes.Buffer
+
+	extern := len(fd.Body) == 0
+
+	if extern {
+		out.WriteString("declare ")
+	} else {
+		out.WriteString("define ")
+	}
+	out.WriteString(fd.ReturnType.CodeGen())
+	out.WriteString(" ")
+	out.WriteString("@")
+	out.WriteString(fd.Token.Value)
+	out.WriteString("(")
+	out.WriteString(")")
+
+	if !extern {
+		out.WriteString(" {")
+		for _, s := range fd.Body {
+			out.WriteString("\n\t")
+			out.WriteString(s.CodeGen())
+		}
+		out.WriteString("\n}")
+	}
+
+	return out.String()
+}
+
+func (fd *FuncDecl) DebugString(i int) string {
 	var out bytes.Buffer
 	printIndentLine(i, &out)
 	out.WriteString("FuncDecl ")
-	out.WriteString(f.Token.Value)
+	out.WriteString(fd.Token.Value)
 	out.WriteString("(")
-	for _, p := range f.Params {
+	for i, p := range fd.Params {
 		out.WriteString(p.String())
-	}
-	out.WriteString(")")
-	if f.ReturnType.Value != "" {
-		out.WriteString(" -> ")
-		out.WriteString(f.ReturnType.Value)
-	}
-	for _, s := range f.Body {
-		out.WriteString(s.DebugString(i + 1))
-	}
-	return out.String()
-}
-func (f *FuncDecl) String() string {
-	var out bytes.Buffer
-	out.WriteString("func ")
-	out.WriteString(f.Token.Value)
-	out.WriteString("(")
-	for i, p := range f.Params {
-		out.WriteString(p.String())
-		if i < len(f.Params)-1 {
+		if i < len(fd.Params)-1 {
 			out.WriteString(", ")
 		}
 	}
 	out.WriteString(")")
-	if len(f.Body) > 0 {
+	if fd.ReturnType.Type != "" {
+		out.WriteString(" -> ")
+		out.WriteString(fd.ReturnType.Type)
+	}
+	for _, s := range fd.Body {
+		out.WriteString(s.DebugString(i + 1))
+	}
+	return out.String()
+}
+func (fd *FuncDecl) String() string {
+	var out bytes.Buffer
+	out.WriteString("func ")
+	out.WriteString(fd.Token.Value)
+	out.WriteString("(")
+	for i, p := range fd.Params {
+		out.WriteString(p.String())
+		if i < len(fd.Params)-1 {
+			out.WriteString(", ")
+		}
+	}
+	out.WriteString(")")
+	if fd.ReturnType.Type != "" {
+		out.WriteString(" ")
+		out.WriteString(fd.ReturnType.Type)
+	}
+	if len(fd.Body) > 0 {
 		out.WriteString(" {")
-		for _, s := range f.Body {
+		for _, s := range fd.Body {
 			out.WriteString("\n\t")
 			out.WriteString(s.String())
 		}
@@ -65,14 +101,7 @@ type FuncCall struct {
 func (f *FuncCall) isExpression() {}
 func (f *FuncCall) isStatement()  {}
 
-func (f *FuncCall) CodeGen() string {
-	var out bytes.Buffer
-	out.WriteString("call ")
-	out.WriteString(f.Token.Value)
-	out.WriteString("(")
-	out.WriteString(")")
-	return out.String()
-}
+func (f *FuncCall) CodeGen() string { return "" }
 
 func (f *FuncCall) DebugString(i int) string {
 	var out bytes.Buffer

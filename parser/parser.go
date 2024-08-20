@@ -5,7 +5,6 @@ import (
 	"lang/ast"
 	"lang/lexer"
 	"lang/token"
-	"strconv"
 )
 
 const (
@@ -58,12 +57,6 @@ func (p *Parser) ParseProgram() (*ast.Program, bool) {
 	return prog, true
 }
 
-func (p *Parser) PrintErrors() {
-	for _, err := range p.errors {
-		fmt.Println(err)
-	}
-}
-
 func (p *Parser) parseFuncStatement() (ast.Statement, bool) {
 	switch p.curr.Type {
 	case token.VAR:
@@ -104,156 +97,6 @@ func (p *Parser) parseReturn() (*ast.Return, bool) {
 	ret.Value = e
 
 	return ret, true
-}
-
-func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
-	var left ast.Expression
-	var ok bool
-
-	switch p.curr.Type {
-	case token.LPAREN:
-		left, ok = p.parseGroupedExpression()
-	case token.MINUS:
-		left, ok = p.parsePrefixExpression()
-	case token.INT:
-		left, ok = p.parseIntegerLiteral()
-	case token.IDENT:
-		left, ok = p.parseVar()
-	case token.STRING:
-		left, ok = p.parseStringLiteral()
-	default:
-		p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
-		return left, false
-	}
-
-	if !ok {
-		return left, false
-	}
-
-	for precedence < p.currTokenPrecedence() {
-		switch p.curr.Type {
-		case token.SLASH:
-			fallthrough
-		case token.ASTERISK:
-			fallthrough
-		case token.MINUS:
-			fallthrough
-		case token.PLUS:
-			left, ok = p.parseInfixExpression(left)
-		default:
-			return left, true
-		}
-
-		if !ok {
-			return left, false
-		}
-	}
-
-	return left, true
-}
-
-func (p *Parser) parseGroupedExpression() (ast.Expression, bool) {
-	if !p.assertCurrIs(token.RPAREN) {
-		return nil, false
-	}
-	p.advance()
-
-	exp, ok := p.parseExpression(LOWEST)
-	if !ok {
-		return nil, false
-	}
-
-	if !p.assertCurrIs(token.LPAREN) {
-		return nil, false
-	}
-	p.advance()
-
-	return exp, true
-}
-
-func (p *Parser) parsePrefixExpression() (ast.Expression, bool) {
-	var ok bool
-	exp := &ast.PrefixExpression{Token: p.curr}
-	p.advance()
-	exp.Right, ok = p.parseExpression(PREFIX)
-	if !ok {
-		return nil, false
-	}
-	return exp, true
-}
-
-func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, bool) {
-	var ok bool
-	exp := &ast.InfixExpression{Token: p.curr, Left: left}
-	precedence := p.currTokenPrecedence()
-	p.advance()
-	exp.Right, ok = p.parseExpression(precedence)
-	if !ok {
-		return nil, ok
-	}
-	return exp, true
-}
-
-func (p *Parser) parseVar() (*ast.Var, bool) {
-	id := &ast.Var{p.curr}
-	p.advance()
-	return id, true
-}
-
-func (p *Parser) parseGlobalVarDecl() (*ast.VarDecl, bool) {
-	if !p.assertCurrIs(token.VAR) {
-		return nil, false
-	}
-	p.advance()
-
-	vd := &ast.VarDecl{Global: true}
-
-	if !p.assertCurrIs(token.IDENT) {
-		return nil, false
-	}
-	vd.Name = p.curr
-	p.advance()
-
-	if p.currTokenIs(token.ASTERISK) {
-		vd.Pointer = true
-		p.advance()
-	}
-
-	if p.currTokenIs(token.IDENT) {
-		vd.Type = p.curr
-		p.advance()
-	}
-
-	if p.currTokenIs(token.ASSIGN) {
-		p.advance()
-
-		exp, ok := p.parseExpression(LOWEST)
-		if !ok {
-			return nil, false
-		}
-
-		vd.Value = exp
-	}
-
-	return vd, true
-}
-
-func (p *Parser) parseIntegerLiteral() (*ast.IntegerLiteral, bool) {
-	i := &ast.IntegerLiteral{Token: p.curr}
-	p.advance()
-	val, err := strconv.ParseInt(i.Token.Value, 10, 64)
-	if err != nil {
-		p.Error(p.curr, "Error parsing integer literal: %v", err)
-		return i, false
-	}
-	i.Value = val
-	return i, true
-}
-
-func (p *Parser) parseStringLiteral() (*ast.StringLiteral, bool) {
-	s := &ast.StringLiteral{Token: p.curr}
-	p.advance()
-	return s, true
 }
 
 func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
@@ -297,12 +140,14 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	p.advance()
 
 	if p.currTokenIs(token.IDENT) {
-		f.ReturnType = p.curr
-		p.advance()
-	}
-
-	if !p.currTokenIs(token.LBRACE) {
-		return f, true
+		t, ok := p.parseType()
+		fmt.Println(t)
+		if !ok {
+			return nil, false
+		}
+		f.ReturnType = t
+	} else {
+		f.ReturnType = &ast.Type{Type: ast.Void}
 	}
 
 	if !p.assertCurrIs(token.LBRACE) {
@@ -360,39 +205,21 @@ func (p *Parser) parseFuncCall() (*ast.FuncCall, bool) {
 	return fc, true
 }
 
-func (p *Parser) parseVarDecl() (*ast.VarDecl, bool) {
-	if p.currTokenIs(token.VAR) {
+func (p *Parser) parseType() (*ast.Type, bool) {
+	t := &ast.Type{}
+
+	if p.currTokenIs(token.ASTERISK) {
+		t.Pointer = true
 		p.advance()
 	}
 
 	if !p.assertCurrIs(token.IDENT) {
 		return nil, false
 	}
-
-	vd := &ast.VarDecl{Name: p.curr}
+	t.Type = p.curr.Value
 	p.advance()
 
-	if p.currTokenIs(token.ASTERISK) {
-		vd.Pointer = true
-		p.advance()
-	}
-
-	if p.currTokenIs(token.IDENT) {
-		vd.Type = p.curr
-		p.advance()
-	}
-
-	if p.currTokenIs(token.ASSIGN) {
-		p.advance()
-
-		exp, ok := p.parseExpression(LOWEST)
-		if !ok {
-			return nil, false
-		}
-		vd.Value = exp
-	}
-
-	return vd, true
+	return t, true
 }
 
 func (p *Parser) advance() {
@@ -405,6 +232,15 @@ func (p *Parser) assertCurrIs(t token.TokenType) bool {
 		return true
 	} else {
 		p.Error(p.curr, fmt.Sprintf("expected %v, got %v", t, p.curr.Type))
+		return false
+	}
+}
+
+func (p *Parser) assertSameType(a, b ast.Type) bool {
+	if a.Type == b.Type {
+		return true
+	} else {
+		p.Error(p.curr, fmt.Sprintf("TypeError: %v != %v", a, b))
 		return false
 	}
 }
@@ -429,6 +265,12 @@ func (p *Parser) currTokenPrecedence() int {
 		return SUM
 	default:
 		return LOWEST
+	}
+}
+
+func (p *Parser) PrintErrors() {
+	for _, err := range p.errors {
+		fmt.Println(err)
 	}
 }
 

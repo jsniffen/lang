@@ -7,11 +7,13 @@ import (
 
 type Var struct {
 	Name token.Token
+	Type Type
 }
 
-func (v *Var) isExpression()   {}
-func (v *Var) CodeGen() string { return "" }
-func (v *Var) String() string  { return v.Name.Value }
+func (v *Var) CodeGen() string  { return "" }
+func (v *Var) ReturnType() Type { return v.Type }
+func (v *Var) isExpression()    {}
+func (v *Var) String() string   { return v.Name.Value }
 func (v *Var) DebugString(i int) string {
 	var out bytes.Buffer
 	printIndentLine(i, &out)
@@ -28,19 +30,8 @@ type VarDecl struct {
 	Global  bool
 }
 
-func (vd *VarDecl) isStatement() {}
-func (vd *VarDecl) CodeGen() string {
-	var out bytes.Buffer
-	out.WriteString(vd.Name.Value)
-	if vd.Type.Value != "" {
-		out.WriteString(" ")
-		out.WriteString(vd.Type.Value)
-		if vd.Pointer {
-			out.WriteString("*")
-		}
-	}
-	return out.String()
-}
+func (vd *VarDecl) CodeGen() string { return "" }
+func (vd *VarDecl) isStatement()    {}
 func (vd *VarDecl) String() string {
 	var out bytes.Buffer
 	out.WriteString(vd.Name.Value)

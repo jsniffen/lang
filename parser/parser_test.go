@@ -6,19 +6,19 @@ import (
 )
 
 func TestParser(t *testing.T) {
-	input := "x = 1"
+	input := "func main() i32 {}"
 	l := lexer.New(input)
 	p := New(l)
 
-	prog := p.ParseProgram()
-	if p.HasErrors() {
+	prog, ok := p.ParseProgram()
+	if !ok {
 		p.PrintErrors()
 		t.Fail()
 		return
 	}
 
 	statements := []string{
-		"x = 1",
+		"func main() i32",
 	}
 
 	if len(prog.Statements) != len(statements) {
@@ -32,5 +32,20 @@ func TestParser(t *testing.T) {
 		if got != want {
 			t.Fatalf("got: %v, want: %v", got, want)
 		}
+	}
+}
+
+func TestParseTypes(t *testing.T) {
+	input := `func main() {
+		return 1 + 2
+	}`
+	l := lexer.New(input)
+	p := New(l)
+
+	_, ok := p.ParseProgram()
+	if !ok {
+		p.PrintErrors()
+		t.Fail()
+		return
 	}
 }
