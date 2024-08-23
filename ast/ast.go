@@ -18,6 +18,7 @@ type Program struct {
 func (p *Program) Codegen(w io.StringWriter) {
 	for _, stmt := range p.Statements {
 		stmt.Codegen(w)
+		w.WriteString("\n")
 	}
 }
 
@@ -39,9 +40,10 @@ func (fa *FuncArg) Codegen(w io.StringWriter) {
 
 type FuncDecl struct {
 	Args       []*FuncArg
+	Body       []Statement
+	Extern     bool
 	Name       string
 	ReturnType *Type
-	Extern     bool
 }
 
 func (fd *FuncDecl) isStatement() {}

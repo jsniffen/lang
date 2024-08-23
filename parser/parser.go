@@ -51,12 +51,18 @@ func (p *Parser) ParseProgram() (*ast.Program, bool) {
 }
 
 func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
+	fd := &ast.FuncDecl{
+		Extern:     true,
+		ReturnType: &ast.Type{Name: types.Void},
+	}
+	var ok bool
+
 	if !p.assertCurrIs(token.FUNC) {
 		return nil, false
 	}
 	p.advance()
 
-	name := p.curr.Value
+	fd.Name = p.curr.Value
 	p.advance()
 
 	if !p.assertCurrIs(token.LPAREN) {
@@ -64,75 +70,72 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	}
 	p.advance()
 
-	args := make([]*ast.FuncArg, 0)
-	for !p.currIsOrEOF(token.RPAREN) {
-		fa, ok := p.parseFuncArg()
+	if !p.currIs(token.RPAREN) {
+		fd.Args, ok = p.parseFuncArgs()
 		if !ok {
 			return nil, false
 		}
-
-		args = append(args, fa)
-
-		if p.currIs(token.COMMA) {
-			p.advance()
-		}
-	}
-
-	if !p.assertCurrIs(token.RPAREN) {
-		return nil, false
 	}
 	p.advance()
 
-	returnType := &ast.Type{Name: types.Void}
 	if p.currIs(token.IDENT) {
-		t, ok := p.parseType()
+		fd.ReturnType, ok = p.parseType()
 		if !ok {
 			return nil, false
 		}
-		returnType = t
 	}
 
-	extern := true
-
 	if p.currIs(token.LBRACE) {
-		extern = false
+		fd.Extern = false
 		p.advance()
 
-		if !p.assertCurrIs(token.RBRACE) {
+		fd.Body, ok = p.parseFuncBody()
+		if !ok {
 			return nil, false
 		}
 		p.advance()
-	}
-
-	fd := &ast.FuncDecl{
-		Args:       args,
-		Extern:     extern,
-		Name:       name,
-		ReturnType: returnType,
 	}
 
 	return fd, true
 }
 
-func (p *Parser) parseFuncArg() (*ast.FuncArg, bool) {
-	if !p.assertCurrIs(token.IDENT) {
-		return nil, false
-	}
-	name := p.curr.Value
-	p.advance()
+func (p *Parser) parseFuncBody() ([]ast.Statement, bool) {
+	body := make([]ast.Statement, 0)
 
-	t, ok := p.parseType()
-	if !ok {
-		return nil, false
+	for !p.currIsOrEOF(token.RBRACE) {
+		p.advance()
 	}
 
-	fa := &ast.FuncArg{
-		Name:     name,
-		Type:     t,
-		Location: "%" + name,
+	return body, true
+}
+
+func (p *Parser) parseFuncArgs() ([]*ast.FuncArg, bool) {
+	args := make([]*ast.FuncArg, 0)
+
+	for !p.currIsOrEOF(token.RPAREN) {
+		fa := &ast.FuncArg{}
+		var ok bool
+
+		if !p.assertCurrIs(token.IDENT) {
+			return nil, false
+		}
+		fa.Name = p.curr.Value
+		fa.Location = "%" + p.curr.Value
+		p.advance()
+
+		fa.Type, ok = p.parseType()
+		if !ok {
+			return nil, false
+		}
+
+		if p.currIs(token.COMMA) {
+			p.advance()
+		}
+
+		args = append(args, fa)
 	}
 
-	return fa, true
+	return args, true
 }
 
 func (p *Parser) parseType() (*ast.Type, bool) {
@@ -141,7 +144,6 @@ func (p *Parser) parseType() (*ast.Type, bool) {
 	}
 	name := p.curr.Value
 	p.advance()
-
 	return &ast.Type{Name: name}, true
 }
 
