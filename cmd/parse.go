@@ -1,21 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"lang/lexer"
 	"lang/parser"
 	"os"
 )
 
-const TestInput = `
-	func main() {
-		s = "hello world"
-		x = 1+2/34
-	}
-`
-
 func main() {
-	inputFile := "examples/testfile"
+	inputFile := "deprecated/examples/testfile"
 	if len(os.Args) > 1 {
 		inputFile = os.Args[1]
 	}
@@ -29,19 +23,17 @@ func main() {
 	}
 	p := parser.New(l)
 
-	prog, ok := p.ParseProgram()
-	if !ok {
-		p.PrintErrors()
-	}
-	fmt.Println(prog.DebugString(0))
-	fmt.Println("---")
-	fmt.Println(prog.String())
-	fmt.Println("---")
+	prog, _ := p.ParseProgram()
+	for _, err := range p.Errors {
+		fmt.Println(err)
 
-	code := prog.CodeGen()
+	}
+
+	var b bytes.Buffer
+	prog.Codegen(&b)
 	if outputFile == "" {
-		fmt.Println(code)
+		fmt.Println(b.String())
 	} else {
-		os.WriteFile(outputFile, []byte(code), 0666)
+		os.WriteFile(outputFile, b.Bytes(), 0666)
 	}
 }

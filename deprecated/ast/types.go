@@ -11,7 +11,7 @@ const (
 
 type Type struct {
 	Pointer bool
-	Type    string
+	Name    string
 }
 
 func (t *Type) CodeGen() string {
@@ -19,7 +19,7 @@ func (t *Type) CodeGen() string {
 	if t.Pointer {
 		out.WriteString("*")
 	}
-	out.WriteString(t.Type)
+	out.WriteString(t.Name)
 	return out.String()
 }
 func (t *Type) DebugString(int) string {
@@ -30,6 +30,6 @@ func (t *Type) String() string {
 	if t.Pointer {
 		out.WriteString("*")
 	}
-	out.WriteString(t.Type)
+	out.WriteString(t.Name)
 	return out.String()
 }

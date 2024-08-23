@@ -19,7 +19,7 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
 	case token.IDENT:
 		left, ok = p.parseVar()
 	default:
-		p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
+		p.error(p.curr, "invalid token: '%s'", p.curr.Value)
 		return left, false
 	}
 
@@ -78,7 +78,7 @@ func (p *Parser) parsePrefixExpression() (ast.Expression, bool) {
 		return nil, false
 	}
 	exp.Right = right
-	exp.Type = right.ReturnType()
+	exp.Result = ast.Result{Type: right.GetResult().Type}
 
 	return exp, true
 }
@@ -95,12 +95,12 @@ func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, bool
 	}
 	exp.Right = right
 
-	ok = p.assertSameType(left.ReturnType(), right.ReturnType())
+	ok = p.assertSameType(left.GetResult().Type, right.GetResult().Type)
 	if !ok {
 		return nil, false
 	}
 
-	exp.Type = left.ReturnType()
+	exp.Result = ast.Result{Type: left.GetResult().Type}
 
 	return exp, true
 }

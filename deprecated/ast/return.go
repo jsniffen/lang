@@ -13,11 +13,12 @@ type Return struct {
 func (r *Return) CodeGen() string {
 	var out bytes.Buffer
 	out.WriteString("ret ")
-	out.WriteString(r.Value.ReturnType().Type)
+	out.WriteString(r.Value.GetResult().Type.Name)
 	return out.String()
 }
 
 func (r *Return) isStatement() {}
+
 func (r *Return) String() string {
 	var out bytes.Buffer
 	out.WriteString(r.Token.Value)
@@ -25,6 +26,7 @@ func (r *Return) String() string {
 	out.WriteString(r.Value.String())
 	return out.String()
 }
+
 func (r *Return) DebugString(i int) string {
 	var out bytes.Buffer
 	printIndentLine(i, &out)

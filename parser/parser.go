@@ -5,28 +5,21 @@ import (
 	"lang/ast"
 	"lang/lexer"
 	"lang/token"
-)
-
-const (
-	_ int = iota
-	LOWEST
-	EQUALS
-	COMPARISON
-	SUM
-	PRODUCT
-	PREFIX
-	FUNCCALL
+	"lang/types"
 )
 
 type Parser struct {
+	l      *lexer.Lexer
 	curr   token.Token
 	next   token.Token
-	l      *lexer.Lexer
-	errors []string
+	Errors []string
 }
 
 func New(l *lexer.Lexer) *Parser {
-	p := &Parser{l: l, errors: make([]string, 0)}
+	p := &Parser{
+		l:      l,
+		Errors: make([]string, 0),
+	}
 	p.advance()
 	p.advance()
 	return p
@@ -35,7 +28,7 @@ func New(l *lexer.Lexer) *Parser {
 func (p *Parser) ParseProgram() (*ast.Program, bool) {
 	prog := &ast.Program{make([]ast.Statement, 0)}
 
-	for !p.currTokenIs(token.EOF) {
+	for !p.currIs(token.EOF) {
 		var stmt ast.Statement
 		var ok bool
 
@@ -43,7 +36,7 @@ func (p *Parser) ParseProgram() (*ast.Program, bool) {
 		case token.FUNC:
 			stmt, ok = p.parseFuncDecl()
 		default:
-			p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
+			p.error(p.curr, "invalid token: '%s'", p.curr.Value)
 			ok = false
 		}
 
@@ -57,63 +50,13 @@ func (p *Parser) ParseProgram() (*ast.Program, bool) {
 	return prog, true
 }
 
-func (p *Parser) parseFuncStatement() (ast.Statement, bool) {
-	switch p.curr.Type {
-	case token.VAR:
-		return p.parseVarDecl()
-	case token.RETURN:
-		return p.parseReturn()
-	case token.IDENT:
-		switch p.next.Type {
-		case token.LPAREN:
-			return p.parseFuncCall()
-		case token.ASSIGN:
-			fallthrough
-		case token.IDENT:
-			fallthrough
-		case token.ASTERISK:
-			return p.parseVarDecl()
-		default:
-			p.Error(p.next, "invalid token: '%s'", p.next.Value)
-			return nil, false
-		}
-	default:
-		p.Error(p.curr, "invalid token: '%s'", p.curr.Value)
-		return nil, false
-	}
-}
-
-func (p *Parser) parseReturn() (*ast.Return, bool) {
-	if !p.assertCurrIs(token.RETURN) {
-		return nil, false
-	}
-	ret := &ast.Return{Token: p.curr}
-	p.advance()
-
-	e, ok := p.parseExpression(LOWEST)
-	if !ok {
-		return nil, false
-	}
-	ret.Value = e
-
-	return ret, true
-}
-
 func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
-	var ok bool
-	ok = p.assertCurrIs(token.FUNC)
-	if !ok {
+	if !p.assertCurrIs(token.FUNC) {
 		return nil, false
 	}
 	p.advance()
 
-	f := &ast.FuncDecl{}
-
-	if !p.assertCurrIs(token.IDENT) {
-		return nil, false
-	}
-
-	f.Token = p.curr
+	name := p.curr.Value
 	p.advance()
 
 	if !p.assertCurrIs(token.LPAREN) {
@@ -121,15 +64,16 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	}
 	p.advance()
 
-	f.Params = make([]*ast.VarDecl, 0)
-	for !p.currTokenIs(token.RPAREN) {
-		param, ok := p.parseVarDecl()
+	args := make([]*ast.FuncArg, 0)
+	for !p.currIsOrEOF(token.RPAREN) {
+		fa, ok := p.parseFuncArg()
 		if !ok {
 			return nil, false
 		}
-		f.Params = append(f.Params, param)
 
-		if p.currTokenIs(token.COMMA) {
+		args = append(args, fa)
+
+		if p.currIs(token.COMMA) {
 			p.advance()
 		}
 	}
@@ -139,87 +83,66 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	}
 	p.advance()
 
-	if p.currTokenIs(token.IDENT) {
+	returnType := &ast.Type{Name: types.Void}
+	if p.currIs(token.IDENT) {
 		t, ok := p.parseType()
-		fmt.Println(t)
 		if !ok {
 			return nil, false
 		}
-		f.ReturnType = t
-	} else {
-		f.ReturnType = &ast.Type{Type: ast.Void}
+		returnType = t
 	}
 
-	if !p.assertCurrIs(token.LBRACE) {
-		return nil, false
-	}
-	p.advance()
+	extern := true
 
-	f.Body = make([]ast.Statement, 0)
-	for !p.currTokenIs(token.RBRACE) {
-		s, ok := p.parseFuncStatement()
-		if !ok {
+	if p.currIs(token.LBRACE) {
+		extern = false
+		p.advance()
+
+		if !p.assertCurrIs(token.RBRACE) {
 			return nil, false
 		}
-		f.Body = append(f.Body, s)
-	}
-
-	if !p.assertCurrIs(token.RBRACE) {
-		return nil, false
-	}
-	p.advance()
-
-	return f, true
-}
-
-func (p *Parser) parseFuncCall() (*ast.FuncCall, bool) {
-	fc := &ast.FuncCall{Token: p.curr, Args: make([]ast.Expression, 0)}
-
-	if !p.assertCurrIs(token.IDENT) {
-		return nil, false
-	}
-	p.advance()
-
-	if !p.assertCurrIs(token.LPAREN) {
-		return nil, false
-	}
-	p.advance()
-
-	for !p.currTokenIs(token.RPAREN) {
-		exp, ok := p.parseExpression(LOWEST)
-		if !ok {
-			return nil, false
-		}
-		fc.Args = append(fc.Args, exp)
-
-		if p.currTokenIs(token.COMMA) {
-			p.advance()
-		}
-	}
-
-	if !p.assertCurrIs(token.RPAREN) {
-		return nil, false
-	}
-	p.advance()
-
-	return fc, true
-}
-
-func (p *Parser) parseType() (*ast.Type, bool) {
-	t := &ast.Type{}
-
-	if p.currTokenIs(token.ASTERISK) {
-		t.Pointer = true
 		p.advance()
 	}
 
+	fd := &ast.FuncDecl{
+		Args:       args,
+		Extern:     extern,
+		Name:       name,
+		ReturnType: returnType,
+	}
+
+	return fd, true
+}
+
+func (p *Parser) parseFuncArg() (*ast.FuncArg, bool) {
 	if !p.assertCurrIs(token.IDENT) {
 		return nil, false
 	}
-	t.Type = p.curr.Value
+	name := p.curr.Value
 	p.advance()
 
-	return t, true
+	t, ok := p.parseType()
+	if !ok {
+		return nil, false
+	}
+
+	fa := &ast.FuncArg{
+		Name:     name,
+		Type:     t,
+		Location: "%" + name,
+	}
+
+	return fa, true
+}
+
+func (p *Parser) parseType() (*ast.Type, bool) {
+	if !p.assertCurrIs(token.IDENT) {
+		return nil, false
+	}
+	name := p.curr.Value
+	p.advance()
+
+	return &ast.Type{Name: name}, true
 }
 
 func (p *Parser) advance() {
@@ -228,54 +151,23 @@ func (p *Parser) advance() {
 }
 
 func (p *Parser) assertCurrIs(t token.TokenType) bool {
-	if p.curr.Type == t {
-		return true
-	} else {
-		p.Error(p.curr, fmt.Sprintf("expected %v, got %v", t, p.curr.Type))
+	if !p.currIs(t) {
+		p.error(p.curr, fmt.Sprintf("expected %v, got %v", t, p.curr.Type))
 		return false
 	}
+	return true
 }
 
-func (p *Parser) assertSameType(a, b ast.Type) bool {
-	if a.Type == b.Type {
-		return true
-	} else {
-		p.Error(p.curr, fmt.Sprintf("TypeError: %v != %v", a, b))
-		return false
-	}
+func (p *Parser) currIsOrEOF(t token.TokenType) bool {
+	return t == p.curr.Type || p.curr.Type == token.EOF
 }
 
-func (p *Parser) currTokenIs(t token.TokenType) bool {
-	return p.curr.Type == t
+func (p *Parser) currIs(t token.TokenType) bool {
+	return t == p.curr.Type
 }
 
-func (p *Parser) nextTokenIs(t token.TokenType) bool {
-	return p.next.Type == t
-}
-
-func (p *Parser) currTokenPrecedence() int {
-	switch p.curr.Type {
-	case token.ASTERISK:
-		fallthrough
-	case token.SLASH:
-		return PRODUCT
-	case token.MINUS:
-		fallthrough
-	case token.PLUS:
-		return SUM
-	default:
-		return LOWEST
-	}
-}
-
-func (p *Parser) PrintErrors() {
-	for _, err := range p.errors {
-		fmt.Println(err)
-	}
-}
-
-func (p *Parser) Error(t token.Token, msg string, args ...interface{}) {
+func (p *Parser) error(t token.Token, msg string, args ...interface{}) {
 	msg = fmt.Sprintf(msg, args...)
 	err := fmt.Sprintf("%s:%d:%d: %s", p.l.Filename, t.Line, t.Column, msg)
-	p.errors = append(p.errors, err)
+	p.Errors = append(p.Errors, err)
 }

@@ -56,9 +56,9 @@ func (fd *FuncDecl) DebugString(i int) string {
 		}
 	}
 	out.WriteString(")")
-	if fd.ReturnType.Type != "" {
+	if fd.ReturnType.Name != "" {
 		out.WriteString(" -> ")
-		out.WriteString(fd.ReturnType.Type)
+		out.WriteString(fd.ReturnType.Name)
 	}
 	for _, s := range fd.Body {
 		out.WriteString(s.DebugString(i + 1))
@@ -77,9 +77,9 @@ func (fd *FuncDecl) String() string {
 		}
 	}
 	out.WriteString(")")
-	if fd.ReturnType.Type != "" {
+	if fd.ReturnType.Name != "" {
 		out.WriteString(" ")
-		out.WriteString(fd.ReturnType.Type)
+		out.WriteString(fd.ReturnType.Name)
 	}
 	if len(fd.Body) > 0 {
 		out.WriteString(" {")
@@ -90,40 +90,5 @@ func (fd *FuncDecl) String() string {
 		out.WriteString("\n")
 		out.WriteString("}")
 	}
-	return out.String()
-}
-
-type FuncCall struct {
-	Token token.Token
-	Args  []Expression
-}
-
-func (f *FuncCall) isExpression() {}
-func (f *FuncCall) isStatement()  {}
-
-func (f *FuncCall) CodeGen() string { return "" }
-
-func (f *FuncCall) DebugString(i int) string {
-	var out bytes.Buffer
-	printIndentLine(i, &out)
-	out.WriteString("FuncCall ")
-	out.WriteString(f.Token.Value)
-	for _, arg := range f.Args {
-		out.WriteString(arg.DebugString(i + 1))
-	}
-	return out.String()
-}
-
-func (f *FuncCall) String() string {
-	var out bytes.Buffer
-	out.WriteString(f.Token.Value)
-	out.WriteString("(")
-	for i, arg := range f.Args {
-		out.WriteString(arg.String())
-		if i < len(f.Args)-1 {
-			out.WriteString(", ")
-		}
-	}
-	out.WriteString(")")
 	return out.String()
 }

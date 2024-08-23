@@ -10,10 +10,13 @@ type Var struct {
 	Type Type
 }
 
-func (v *Var) CodeGen() string  { return "" }
-func (v *Var) ReturnType() Type { return v.Type }
-func (v *Var) isExpression()    {}
-func (v *Var) String() string   { return v.Name.Value }
+func (v *Var) CodeGen() string { return "" }
+func (v *Var) GetResult() Result {
+	return Result{Type: v.Type}
+
+}
+func (v *Var) isExpression()  {}
+func (v *Var) String() string { return v.Name.Value }
 func (v *Var) DebugString(i int) string {
 	var out bytes.Buffer
 	printIndentLine(i, &out)
