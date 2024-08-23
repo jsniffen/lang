@@ -1,11 +1,13 @@
 program := {statement}
 
-statement := function | variable | struct
+statement := func_declaration
 
-struct := "struct" identifier "{" {variable} "}"
+func_declaration := "func", ident, "(", {{ident type}, ", "} ")" {type} {func_body}
 
-variable := identifier
+func_body := "{" {func_statement} "}"
 
-function := "func", ident, "(", {variable, ","} ")" {variable}
+func_statement := 
 
-identifier := letter {letter}
+ident := string
+
+type := i32
