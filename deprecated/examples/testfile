@@ -1,2 +1,4 @@
-func main(a i32)
-func main(a i32, b i32) {}
+func one(a i32)
+func two(a i32, b i32) i32 {
+	return 123
+}

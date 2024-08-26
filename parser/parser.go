@@ -6,6 +6,7 @@ import (
 	"lang/lexer"
 	"lang/token"
 	"lang/types"
+	"strconv"
 )
 
 type Parser struct {
@@ -36,7 +37,7 @@ func (p *Parser) ParseProgram() (*ast.Program, bool) {
 		case token.FUNC:
 			stmt, ok = p.parseFuncDecl()
 		default:
-			p.error(p.curr, "invalid token: '%s'", p.curr.Value)
+			p.errorInvalidToken()
 			ok = false
 		}
 
@@ -103,10 +104,63 @@ func (p *Parser) parseFuncBody() ([]ast.Statement, bool) {
 	body := make([]ast.Statement, 0)
 
 	for !p.currIsOrEOF(token.RBRACE) {
-		p.advance()
+		var stmt ast.Statement
+		var ok bool
+
+		switch p.curr.Type {
+		case token.RETURN:
+			stmt, ok = p.parseReturn()
+		default:
+			p.errorInvalidToken()
+			ok = false
+		}
+
+		if !ok {
+			return body, false
+		}
+
+		body = append(body, stmt)
 	}
 
 	return body, true
+}
+
+func (p *Parser) parseReturn() (*ast.Return, bool) {
+	if !p.assertCurrIs(token.RETURN) {
+		return nil, false
+	}
+	r := &ast.Return{Token: p.curr}
+	p.advance()
+
+	if !p.currIs("}") {
+		e, ok := p.parseExpression()
+		if !ok {
+			return nil, false
+		}
+		r.Value = e
+		r.HasValue = true
+	}
+
+	return r, true
+}
+
+func (p *Parser) parseExpression() (ast.Expression, bool) {
+	var left ast.Expression
+	var ok bool
+
+	switch p.curr.Type {
+	case token.INT:
+		left, ok = p.parseIntLiteral()
+	default:
+		p.errorInvalidToken()
+		ok = false
+	}
+
+	if !ok {
+		return left, false
+	}
+
+	return left, true
 }
 
 func (p *Parser) parseFuncArgs() ([]*ast.FuncArg, bool) {
@@ -147,6 +201,23 @@ func (p *Parser) parseType() (*ast.Type, bool) {
 	return &ast.Type{Name: name}, true
 }
 
+func (p *Parser) parseIntLiteral() (*ast.IntLiteral, bool) {
+	if !p.assertCurrIs(token.INT) {
+		return nil, false
+	}
+	il := &ast.IntLiteral{Token: p.curr}
+
+	n, err := strconv.Atoi(p.curr.Value)
+	if err != nil {
+		p.errorParse(err)
+		return nil, false
+	}
+	p.advance()
+	il.Value = n
+
+	return il, true
+}
+
 func (p *Parser) advance() {
 	p.curr = p.next
 	p.next = p.l.NextToken()
@@ -172,4 +243,12 @@ func (p *Parser) error(t token.Token, msg string, args ...interface{}) {
 	msg = fmt.Sprintf(msg, args...)
 	err := fmt.Sprintf("%s:%d:%d: %s", p.l.Filename, t.Line, t.Column, msg)
 	p.Errors = append(p.Errors, err)
+}
+
+func (p *Parser) errorInvalidToken() {
+	p.error(p.curr, "invalid token: '%s'", p.curr.Value)
+}
+
+func (p *Parser) errorParse(err error) {
+	p.error(p.curr, "%s", err)
 }

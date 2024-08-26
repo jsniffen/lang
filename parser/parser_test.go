@@ -2,69 +2,64 @@ package parser
 
 import (
 	"bytes"
-	"lang/ast"
+	"fmt"
 	"lang/lexer"
-	"lang/types"
-	"reflect"
+	"strings"
 	"testing"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func TestParseFuncDecl(t *testing.T) {
 	input := `
 	func a(a i32, b i32)
-	func b() i32 {}
-	`
-	stmts := &ast.Program{
-		Statements: []ast.Statement{
-			&ast.FuncDecl{
-				Args: []*ast.FuncArg{
-					&ast.FuncArg{
-						Name:     "a",
-						Type:     &ast.Type{types.Int32},
-						Location: "%a",
-					},
-					&ast.FuncArg{
-						Name:     "b",
-						Type:     &ast.Type{types.Int32},
-						Location: "%b",
-					},
-				},
-				Name:       "a",
-				ReturnType: &ast.Type{types.Void},
-				Extern:     true,
-			},
-			&ast.FuncDecl{
-				Body:       []ast.Statement{},
-				Name:       "b",
-				ReturnType: &ast.Type{types.Int32},
-				Extern:     false,
-			},
-		},
+	func b() i32 {
+		return 12345
 	}
+	`
 
-	test(t, input, stmts)
+	want := `
+declare void @a(i32 %a, i32 %b)
+define i32 @b() {
+	ret i32 12345
+}
+`
+
+	test(t, input, want)
 }
 
-func test(t *testing.T, input string, want *ast.Program) {
+func test(t *testing.T, input string, expected string) {
 	l := lexer.New(input)
 	p := New(l)
 
-	got, _ := p.ParseProgram()
+	prog, _ := p.ParseProgram()
 
 	for _, err := range p.Errors {
 		t.Fatalf(err)
 	}
 
-	if !reflect.DeepEqual(got, want) {
-		var gotBuf bytes.Buffer
-		var wantBuf bytes.Buffer
+	var buf bytes.Buffer
+	prog.Codegen(&buf)
 
-		got.Codegen(&gotBuf)
+	var want, got string
 
-		want.Codegen(&wantBuf)
+	got = strings.TrimSpace(buf.String())
+	got = strings.ReplaceAll(got, "\t", "")
+	got = strings.ReplaceAll(got, " ", "")
+	got = strings.ReplaceAll(got, "\n", "")
+	got = strings.ReplaceAll(got, "\r", "")
 
-		t.Fatalf("got: \n%s, want: \n%s, got: %s, want: %s", gotBuf.String(), wantBuf.String(), spew.Sdump(got), spew.Sdump(want))
+	want = strings.TrimSpace(expected)
+	want = strings.ReplaceAll(want, "\t", "")
+	want = strings.ReplaceAll(want, " ", "")
+	want = strings.ReplaceAll(want, "\n", "")
+	want = strings.ReplaceAll(want, "\r", "")
+
+	if got != want {
+		for i := range got {
+			if got[i] != want[i] {
+				fmt.Printf("[%d], '%s' != '%s'\n", i, string(got[i]), string(want[i]))
+				break
+			}
+		}
+		t.Fatalf("got: \n'%s', want: \n'%s'", buf.String(), expected)
 	}
 }

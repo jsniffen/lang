@@ -1,6 +1,11 @@
 package ast
 
-import "io"
+import (
+	"io"
+	"lang/token"
+	"lang/types"
+	"strconv"
+)
 
 type Node interface {
 	Codegen(w io.StringWriter)
@@ -9,6 +14,12 @@ type Node interface {
 type Statement interface {
 	Node
 	isStatement()
+}
+
+type Expression interface {
+	Node
+	isExpression()
+	GetType() *Type
 }
 
 type Program struct {
@@ -50,12 +61,12 @@ func (fd *FuncDecl) isStatement() {}
 
 func (fd *FuncDecl) Codegen(w io.StringWriter) {
 	if fd.Extern {
-		w.WriteString("define ")
-	} else {
 		w.WriteString("declare ")
+	} else {
+		w.WriteString("define ")
 	}
 	fd.ReturnType.Codegen(w)
-	w.WriteString(" ")
+	w.WriteString(" @")
 	w.WriteString(fd.Name)
 	w.WriteString("(")
 	for i, fa := range fd.Args {
@@ -65,7 +76,55 @@ func (fd *FuncDecl) Codegen(w io.StringWriter) {
 		}
 	}
 	w.WriteString(")")
+
+	if !fd.Extern {
+		w.WriteString(" {")
+		for i, stmt := range fd.Body {
+			w.WriteString("\n\t")
+			stmt.Codegen(w)
+
+			if i == len(fd.Body)-1 {
+				w.WriteString("\n")
+			}
+		}
+		w.WriteString("}")
+	}
 	w.WriteString(" ")
+}
+
+type IntLiteral struct {
+	Token token.Token
+	Value int
+}
+
+func (il *IntLiteral) isExpression() {}
+
+func (il *IntLiteral) GetType() *Type {
+	return &Type{
+		Name: types.Int32,
+	}
+}
+
+func (il *IntLiteral) Codegen(w io.StringWriter) {
+	w.WriteString(strconv.Itoa(il.Value))
+}
+
+type Return struct {
+	Token    token.Token
+	HasValue bool
+	Value    Expression
+}
+
+func (r *Return) isStatement() {}
+
+func (r *Return) Codegen(w io.StringWriter) {
+	w.WriteString("ret")
+	if r.HasValue {
+		w.WriteString(" ")
+		r.Value.GetType().Codegen(w)
+		w.WriteString(" ")
+		r.Value.Codegen(w)
+	}
 }
 
 type Type struct {
