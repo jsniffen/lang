@@ -36,12 +36,12 @@ func test(t *testing.T, input string, expected string) {
 		t.Fatalf(err)
 	}
 
-	var w ir.Writer
-	prog.Codegen(&w)
+	g := ir.New(prog)
+	code := g.Generate()
 
 	var want, got string
 
-	got = strings.TrimSpace(w.String())
+	got = strings.TrimSpace(code)
 	got = strings.ReplaceAll(got, "\t", "")
 	got = strings.ReplaceAll(got, " ", "")
 	got = strings.ReplaceAll(got, "\n", "")
@@ -60,6 +60,6 @@ func test(t *testing.T, input string, expected string) {
 				break
 			}
 		}
-		t.Fatalf("got: \n'%s', want: \n'%s'", w.String(), expected)
+		t.Fatalf("got: \n'%s', want: \n'%s'", code, expected)
 	}
 }
