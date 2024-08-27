@@ -21,10 +21,11 @@ const (
 )
 
 type Parser struct {
-	l      *lexer.Lexer
-	curr   token.Token
-	next   token.Token
-	Errors []string
+	l        *lexer.Lexer
+	curr     token.Token
+	next     token.Token
+	register int
+	Errors   []string
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -101,7 +102,7 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
 }
 
 func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, bool) {
-	exp := &ast.InfixExpression{Token: p.curr, Left: left, Location: &ast.Location{"%loc"}}
+	exp := &ast.InfixExpression{Token: p.curr, Left: left, Location: p.getRegisterLocation()}
 
 	precedence := p.currPrecedence()
 	p.advance()
@@ -224,7 +225,7 @@ func (p *Parser) parseFuncArgs() ([]*ast.FuncArg, bool) {
 			return nil, false
 		}
 		fa.Name = p.curr.Value
-		fa.Location = &ast.Location{"%" + p.curr.Value}
+		fa.Location = p.getRegisterLocation()
 		p.advance()
 
 		fa.Type, ok = p.parseType()
@@ -266,6 +267,14 @@ func (p *Parser) parseIntLiteral() (*ast.IntLiteral, bool) {
 	il.Value = n
 
 	return il, true
+}
+
+func (p *Parser) getRegisterLocation() *ast.Location {
+	p.register += 1
+	name := "%" + strconv.Itoa(p.register)
+	return &ast.Location{
+		Name: name,
+	}
 }
 
 func (p *Parser) advance() {

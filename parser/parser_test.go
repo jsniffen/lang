@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"bytes"
 	"fmt"
+	"lang/ir"
 	"lang/lexer"
 	"strings"
 	"testing"
@@ -17,7 +17,7 @@ func TestParseFuncDecl(t *testing.T) {
 	`
 
 	want := `
-declare void @a(i32 %a, i32 %b)
+declare void @a(i32 %1, i32 %2)
 define i32 @b() {
 	ret i32 12345
 }
@@ -36,12 +36,12 @@ func test(t *testing.T, input string, expected string) {
 		t.Fatalf(err)
 	}
 
-	var buf bytes.Buffer
-	prog.Codegen(&buf)
+	var w ir.Writer
+	prog.Codegen(&w)
 
 	var want, got string
 
-	got = strings.TrimSpace(buf.String())
+	got = strings.TrimSpace(w.String())
 	got = strings.ReplaceAll(got, "\t", "")
 	got = strings.ReplaceAll(got, " ", "")
 	got = strings.ReplaceAll(got, "\n", "")
@@ -60,6 +60,6 @@ func test(t *testing.T, input string, expected string) {
 				break
 			}
 		}
-		t.Fatalf("got: \n'%s', want: \n'%s'", buf.String(), expected)
+		t.Fatalf("got: \n'%s', want: \n'%s'", w.String(), expected)
 	}
 }
