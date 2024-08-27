@@ -13,7 +13,7 @@ func main() {
 	if len(os.Args) > 1 {
 		inputFile = os.Args[1]
 	}
-	outputFile := ""
+	outputFile := "out.ll"
 	if len(os.Args) > 2 {
 		outputFile = os.Args[2]
 	}
@@ -29,11 +29,8 @@ func main() {
 
 	}
 
-	var w ir.Writer
-	prog.Codegen(&w)
-	if outputFile == "" {
-		fmt.Println(w.String())
-	} else {
-		os.WriteFile(outputFile, w.Bytes(), 0666)
-	}
+	g := ir.New(prog)
+	code := g.Generate()
+	fmt.Println(code)
+	os.WriteFile(outputFile, []byte(code), 0666)
 }

@@ -1,14 +1,14 @@
 package ast
 
 import (
-	"lang/ir"
+	"lang/old_ir"
 	"lang/token"
 	"lang/types"
 	"strconv"
 )
 
 type Node interface {
-	Codegen(w *ir.Writer)
+	Codegen(w *old_ir.Writer)
 }
 
 type Statement interface {
@@ -27,7 +27,7 @@ type Program struct {
 	Statements []Statement
 }
 
-func (p *Program) Codegen(w *ir.Writer) {
+func (p *Program) Codegen(w *old_ir.Writer) {
 	for _, stmt := range p.Statements {
 		stmt.Codegen(w)
 		w.Write("\n")
@@ -42,7 +42,7 @@ type FuncArg struct {
 
 func (fa *FuncArg) isStatement() {}
 
-func (fa *FuncArg) Codegen(w *ir.Writer) {
+func (fa *FuncArg) Codegen(w *old_ir.Writer) {
 	fa.Type.Codegen(w)
 	if fa.Location != nil {
 		w.Write(" ")
@@ -60,7 +60,7 @@ type FuncDecl struct {
 
 func (fd *FuncDecl) isStatement() {}
 
-func (fd *FuncDecl) Codegen(w *ir.Writer) {
+func (fd *FuncDecl) Codegen(w *old_ir.Writer) {
 	if fd.Extern {
 		w.Write("declare ")
 	} else {
@@ -80,8 +80,8 @@ func (fd *FuncDecl) Codegen(w *ir.Writer) {
 
 	if !fd.Extern {
 		w.Write(" {")
+		w.Indent()
 		for i, stmt := range fd.Body {
-			w.Indent()
 			w.NewLine()
 			stmt.Codegen(w)
 
@@ -112,7 +112,7 @@ func (il *IntLiteral) GetType() *Type {
 	}
 }
 
-func (il *IntLiteral) Codegen(w *ir.Writer) {}
+func (il *IntLiteral) Codegen(w *old_ir.Writer) {}
 
 type Return struct {
 	Token    token.Token
@@ -122,7 +122,7 @@ type Return struct {
 
 func (r *Return) isStatement() {}
 
-func (r *Return) Codegen(w *ir.Writer) {
+func (r *Return) Codegen(w *old_ir.Writer) {
 	if r.HasValue {
 		r.Value.Codegen(w)
 	}
@@ -150,12 +150,25 @@ func (ie *InfixExpression) GetType() *Type { return ie.Type }
 
 func (ie *InfixExpression) GetLocation() *Location { return ie.Location }
 
-func (ie *InfixExpression) Codegen(w *ir.Writer) {
+func (ie *InfixExpression) Codegen(w *old_ir.Writer) {
 	ie.Left.Codegen(w)
 	ie.Right.Codegen(w)
 
 	ie.Location.Codegen(w)
-	w.Write(" = add ")
+	w.Write(" = ")
+
+	switch ie.Token.Type {
+	case token.SLASH:
+		w.Write("sdiv")
+	case token.ASTERISK:
+		w.Write("mul")
+	case token.MINUS:
+		w.Write("sub")
+	case token.PLUS:
+		w.Write("add")
+	}
+
+	w.Write(" ")
 	ie.GetType().Codegen(w)
 	w.Write(" ")
 	ie.Left.GetLocation().Codegen(w)
@@ -165,11 +178,49 @@ func (ie *InfixExpression) Codegen(w *ir.Writer) {
 	w.NewLine()
 }
 
+type Var struct {
+	Token    token.Token
+	Name     string
+	Type     *Type
+	Location *Location
+}
+
+func (v *Var) isExpression() {}
+
+func (v *Var) Codegen(w *old_ir.Writer) {}
+func (v *Var) GetLocation() *Location   { return v.Location }
+func (v *Var) GetType() *Type           { return v.Type }
+
+type VarDecl struct {
+	Location *Location
+	Name     string
+	Token    token.Token
+	Type     *Type
+	Value    Expression
+}
+
+func (vd *VarDecl) isStatement() {}
+
+func (vd *VarDecl) Codegen(w *old_ir.Writer) {
+	vd.Location.Codegen(w)
+	w.Write(" = alloca ")
+	vd.Type.Codegen(w)
+	w.NewLine()
+	vd.Value.Codegen(w)
+	w.NewLine()
+	w.Write("store ")
+	vd.Value.GetType().Codegen(w)
+	w.Write(" ")
+	vd.Value.GetLocation().Codegen(w)
+	w.Write(", ptr ")
+	vd.Location.Codegen(w)
+}
+
 type Location struct {
 	Name string
 }
 
-func (l *Location) Codegen(w *ir.Writer) {
+func (l *Location) Codegen(w *old_ir.Writer) {
 	w.Write(l.Name)
 }
 
@@ -177,6 +228,6 @@ type Type struct {
 	Name string
 }
 
-func (t *Type) Codegen(w *ir.Writer) {
+func (t *Type) Codegen(w *old_ir.Writer) {
 	w.Write(t.Name)
 }

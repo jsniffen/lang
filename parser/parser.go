@@ -70,6 +70,8 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
 	switch p.curr.Type {
 	case token.INT:
 		left, ok = p.parseIntLiteral()
+	case token.IDENT:
+		left, ok = p.parseVar()
 	default:
 		p.errorInvalidToken()
 		ok = false
@@ -102,7 +104,7 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
 }
 
 func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, bool) {
-	exp := &ast.InfixExpression{Token: p.curr, Left: left, Location: p.getRegisterLocation()}
+	exp := &ast.InfixExpression{Token: p.curr, Left: left}
 
 	precedence := p.currPrecedence()
 	p.advance()
@@ -112,11 +114,6 @@ func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, bool
 		return nil, false
 	}
 	exp.Right = right
-
-	if !p.assertSameType(left.GetType(), right.GetType()) {
-		return nil, false
-	}
-	exp.Type = left.GetType()
 
 	return exp, true
 }
@@ -180,6 +177,8 @@ func (p *Parser) parseFuncBody() ([]ast.Statement, bool) {
 		switch p.curr.Type {
 		case token.RETURN:
 			stmt, ok = p.parseReturn()
+		case token.VAR:
+			stmt, ok = p.parseVarDecl()
 		default:
 			p.errorInvalidToken()
 			ok = false
@@ -193,6 +192,50 @@ func (p *Parser) parseFuncBody() ([]ast.Statement, bool) {
 	}
 
 	return body, true
+}
+
+func (p *Parser) parseVarDecl() (*ast.VarDecl, bool) {
+	if !p.assertCurrIs(token.VAR) {
+		return nil, false
+	}
+	vd := &ast.VarDecl{Token: p.curr}
+	p.advance()
+
+	if !p.assertCurrIs(token.IDENT) {
+		return nil, false
+	}
+	vd.Name = p.curr.Value
+	p.advance()
+
+	t, ok := p.parseType()
+	if !ok {
+		return nil, false
+	}
+	vd.Type = t
+
+	if !p.assertCurrIs(token.ASSIGN) {
+		return nil, false
+	}
+	p.advance()
+
+	e, ok := p.parseExpression(LOWEST)
+	if !ok {
+		return nil, false
+	}
+	vd.Value = e
+	vd.Location = p.getStackLocation(vd.Name)
+
+	return vd, true
+}
+
+func (p *Parser) parseVar() (*ast.Var, bool) {
+	if !p.assertCurrIs(token.IDENT) {
+		return nil, false
+	}
+	v := &ast.Var{Token: p.curr, Name: p.curr.Value}
+	p.advance()
+
+	return v, true
 }
 
 func (p *Parser) parseReturn() (*ast.Return, bool) {
@@ -225,7 +268,6 @@ func (p *Parser) parseFuncArgs() ([]*ast.FuncArg, bool) {
 			return nil, false
 		}
 		fa.Name = p.curr.Value
-		fa.Location = p.getRegisterLocation()
 		p.advance()
 
 		fa.Type, ok = p.parseType()
@@ -277,6 +319,12 @@ func (p *Parser) getRegisterLocation() *ast.Location {
 	}
 }
 
+func (p *Parser) getStackLocation(name string) *ast.Location {
+	return &ast.Location{
+		Name: "%" + name,
+	}
+}
+
 func (p *Parser) advance() {
 	p.curr = p.next
 	p.next = p.l.NextToken()
@@ -285,14 +333,6 @@ func (p *Parser) advance() {
 func (p *Parser) assertCurrIs(t token.TokenType) bool {
 	if !p.currIs(t) {
 		p.error(p.curr, fmt.Sprintf("expected %v, got %v", t, p.curr.Type))
-		return false
-	}
-	return true
-}
-
-func (p *Parser) assertSameType(a, b *ast.Type) bool {
-	if a.Name != b.Name {
-		p.error(p.curr, fmt.Sprintf("TypeError: %v != %v", a, b))
 		return false
 	}
 	return true
