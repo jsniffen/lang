@@ -20,7 +20,7 @@ type Expression interface {
 	Node
 	isExpression()
 	GetType() *Type
-	GetLocation() string
+	GetLocation() *Location
 }
 
 type Program struct {
@@ -37,16 +37,16 @@ func (p *Program) Codegen(w *ir.Writer) {
 type FuncArg struct {
 	Name     string
 	Type     *Type
-	Location string
+	Location *Location
 }
 
 func (fa *FuncArg) isStatement() {}
 
 func (fa *FuncArg) Codegen(w *ir.Writer) {
 	fa.Type.Codegen(w)
-	if fa.Location != "" {
+	if fa.Location != nil {
 		w.Write(" ")
-		w.Write(fa.Location)
+		fa.Location.Codegen(w)
 	}
 }
 
@@ -102,8 +102,8 @@ type IntLiteral struct {
 
 func (il *IntLiteral) isExpression() {}
 
-func (il *IntLiteral) GetLocation() string {
-	return strconv.Itoa(il.Value)
+func (il *IntLiteral) GetLocation() *Location {
+	return &Location{strconv.Itoa(il.Value)}
 }
 
 func (il *IntLiteral) GetType() *Type {
@@ -132,7 +132,7 @@ func (r *Return) Codegen(w *ir.Writer) {
 		w.Write(" ")
 		r.Value.GetType().Codegen(w)
 		w.Write(" ")
-		w.Write(r.Value.GetLocation())
+		r.Value.GetLocation().Codegen(w)
 	}
 }
 
@@ -140,7 +140,7 @@ type InfixExpression struct {
 	Token    token.Token
 	Left     Expression
 	Right    Expression
-	Location string
+	Location *Location
 	Type     *Type
 }
 
@@ -148,21 +148,29 @@ func (ie *InfixExpression) isExpression() {}
 
 func (ie *InfixExpression) GetType() *Type { return ie.Type }
 
-func (ie *InfixExpression) GetLocation() string { return ie.Location }
+func (ie *InfixExpression) GetLocation() *Location { return ie.Location }
 
 func (ie *InfixExpression) Codegen(w *ir.Writer) {
 	ie.Left.Codegen(w)
 	ie.Right.Codegen(w)
 
-	w.Write(ie.Location)
+	ie.Location.Codegen(w)
 	w.Write(" = add ")
 	ie.GetType().Codegen(w)
 	w.Write(" ")
-	w.Write(ie.Left.GetLocation())
+	ie.Left.GetLocation().Codegen(w)
 	w.Write(", ")
-	w.Write(ie.Right.GetLocation())
+	ie.Right.GetLocation().Codegen(w)
 
 	w.NewLine()
+}
+
+type Location struct {
+	Name string
+}
+
+func (l *Location) Codegen(w *ir.Writer) {
+	w.Write(l.Name)
 }
 
 type Type struct {

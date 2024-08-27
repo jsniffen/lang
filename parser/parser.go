@@ -101,7 +101,7 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
 }
 
 func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, bool) {
-	exp := &ast.InfixExpression{Token: p.curr, Left: left, Location: "%loc"}
+	exp := &ast.InfixExpression{Token: p.curr, Left: left, Location: &ast.Location{"%loc"}}
 
 	precedence := p.currPrecedence()
 	p.advance()
@@ -224,7 +224,7 @@ func (p *Parser) parseFuncArgs() ([]*ast.FuncArg, bool) {
 			return nil, false
 		}
 		fa.Name = p.curr.Value
-		fa.Location = "%" + p.curr.Value
+		fa.Location = &ast.Location{"%" + p.curr.Value}
 		p.advance()
 
 		fa.Type, ok = p.parseType()
