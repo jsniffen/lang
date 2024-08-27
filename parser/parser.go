@@ -9,6 +9,17 @@ import (
 	"strconv"
 )
 
+const (
+	_ int = iota
+	LOWEST
+	EQUALS
+	COMPARISON
+	SUM
+	PRODUCT
+	PREFIX
+	FUNCCALL
+)
+
 type Parser struct {
 	l      *lexer.Lexer
 	curr   token.Token
@@ -49,6 +60,64 @@ func (p *Parser) ParseProgram() (*ast.Program, bool) {
 	}
 
 	return prog, true
+}
+
+func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
+	var left ast.Expression
+	var ok bool
+
+	switch p.curr.Type {
+	case token.INT:
+		left, ok = p.parseIntLiteral()
+	default:
+		p.errorInvalidToken()
+		ok = false
+	}
+
+	if !ok {
+		return left, false
+	}
+
+	for precedence < p.currPrecedence() {
+		switch p.curr.Type {
+		case token.SLASH:
+			fallthrough
+		case token.ASTERISK:
+			fallthrough
+		case token.MINUS:
+			fallthrough
+		case token.PLUS:
+			left, ok = p.parseInfixExpression(left)
+		default:
+			return left, true
+		}
+
+		if !ok {
+			return left, false
+		}
+	}
+
+	return left, true
+}
+
+func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, bool) {
+	exp := &ast.InfixExpression{Token: p.curr, Left: left, Location: "%loc"}
+
+	precedence := p.currPrecedence()
+	p.advance()
+
+	right, ok := p.parseExpression(precedence)
+	if !ok {
+		return nil, false
+	}
+	exp.Right = right
+
+	if !p.assertSameType(left.GetType(), right.GetType()) {
+		return nil, false
+	}
+	exp.Type = left.GetType()
+
+	return exp, true
 }
 
 func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
@@ -133,7 +202,7 @@ func (p *Parser) parseReturn() (*ast.Return, bool) {
 	p.advance()
 
 	if !p.currIs("}") {
-		e, ok := p.parseExpression()
+		e, ok := p.parseExpression(LOWEST)
 		if !ok {
 			return nil, false
 		}
@@ -142,25 +211,6 @@ func (p *Parser) parseReturn() (*ast.Return, bool) {
 	}
 
 	return r, true
-}
-
-func (p *Parser) parseExpression() (ast.Expression, bool) {
-	var left ast.Expression
-	var ok bool
-
-	switch p.curr.Type {
-	case token.INT:
-		left, ok = p.parseIntLiteral()
-	default:
-		p.errorInvalidToken()
-		ok = false
-	}
-
-	if !ok {
-		return left, false
-	}
-
-	return left, true
 }
 
 func (p *Parser) parseFuncArgs() ([]*ast.FuncArg, bool) {
@@ -231,12 +281,35 @@ func (p *Parser) assertCurrIs(t token.TokenType) bool {
 	return true
 }
 
+func (p *Parser) assertSameType(a, b *ast.Type) bool {
+	if a.Name != b.Name {
+		p.error(p.curr, fmt.Sprintf("TypeError: %v != %v", a, b))
+		return false
+	}
+	return true
+}
+
 func (p *Parser) currIsOrEOF(t token.TokenType) bool {
 	return t == p.curr.Type || p.curr.Type == token.EOF
 }
 
 func (p *Parser) currIs(t token.TokenType) bool {
 	return t == p.curr.Type
+}
+
+func (p *Parser) currPrecedence() int {
+	switch p.curr.Type {
+	case token.ASTERISK:
+		fallthrough
+	case token.SLASH:
+		return PRODUCT
+	case token.MINUS:
+		fallthrough
+	case token.PLUS:
+		return SUM
+	default:
+		return LOWEST
+	}
 }
 
 func (p *Parser) error(t token.Token, msg string, args ...interface{}) {

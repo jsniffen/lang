@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
+	"lang/ir"
 	"lang/lexer"
 	"lang/parser"
 	"os"
@@ -29,11 +29,11 @@ func main() {
 
 	}
 
-	var b bytes.Buffer
-	prog.Codegen(&b)
+	var w ir.Writer
+	prog.Codegen(&w)
 	if outputFile == "" {
-		fmt.Println(b.String())
+		fmt.Println(w.String())
 	} else {
-		os.WriteFile(outputFile, b.Bytes(), 0666)
+		os.WriteFile(outputFile, w.Bytes(), 0666)
 	}
 }
