@@ -48,6 +48,8 @@ func (p *Parser) ParseProgram() (*ast.Program, bool) {
 		switch p.curr.Type {
 		case token.FUNC:
 			stmt, ok = p.parseFuncDecl()
+		case token.VAR:
+			stmt, ok = p.parseVarDecl()
 		default:
 			p.errorInvalidToken()
 			ok = false
