@@ -223,7 +223,6 @@ func (p *Parser) parseVarDecl() (*ast.VarDecl, bool) {
 		return nil, false
 	}
 	vd.Value = e
-	vd.Location = p.getStackLocation(vd.Name)
 
 	return vd, true
 }
@@ -309,20 +308,6 @@ func (p *Parser) parseIntLiteral() (*ast.IntLiteral, bool) {
 	il.Value = n
 
 	return il, true
-}
-
-func (p *Parser) getRegisterLocation() *ast.Location {
-	p.register += 1
-	name := "%" + strconv.Itoa(p.register)
-	return &ast.Location{
-		Name: name,
-	}
-}
-
-func (p *Parser) getStackLocation(name string) *ast.Location {
-	return &ast.Location{
-		Name: "%" + name,
-	}
 }
 
 func (p *Parser) advance() {

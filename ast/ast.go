@@ -6,11 +6,17 @@ import (
 	"strconv"
 )
 
+type Node interface {
+	isNode()
+}
+
 type Statement interface {
+	Node
 	isStatement()
 }
 
 type Expression interface {
+	Node
 	isExpression()
 	GetType() *Type
 	GetLocation() *Location
@@ -26,6 +32,7 @@ type FuncArg struct {
 	Location *Location
 }
 
+func (fa *FuncArg) isNode()      {}
 func (fa *FuncArg) isStatement() {}
 
 type FuncDecl struct {
@@ -36,6 +43,7 @@ type FuncDecl struct {
 	ReturnType *Type
 }
 
+func (fd *FuncDecl) isNode()      {}
 func (fd *FuncDecl) isStatement() {}
 
 type IntLiteral struct {
@@ -43,6 +51,7 @@ type IntLiteral struct {
 	Value int
 }
 
+func (il *IntLiteral) isNode()       {}
 func (il *IntLiteral) isExpression() {}
 
 func (il *IntLiteral) GetLocation() *Location {
@@ -61,6 +70,7 @@ type Return struct {
 	Value    Expression
 }
 
+func (r *Return) isNode()      {}
 func (r *Return) isStatement() {}
 
 type InfixExpression struct {
@@ -71,6 +81,7 @@ type InfixExpression struct {
 	Type     *Type
 }
 
+func (ie *InfixExpression) isNode()       {}
 func (ie *InfixExpression) isExpression() {}
 
 func (ie *InfixExpression) GetType() *Type { return ie.Type }
@@ -84,6 +95,7 @@ type Var struct {
 	Location *Location
 }
 
+func (v *Var) isNode()       {}
 func (v *Var) isExpression() {}
 
 func (v *Var) GetLocation() *Location { return v.Location }
@@ -97,12 +109,17 @@ type VarDecl struct {
 	Value    Expression
 }
 
+func (vd *VarDecl) isNode()      {}
 func (vd *VarDecl) isStatement() {}
 
 type Location struct {
 	Name string
 }
 
+func (l *Location) isNode() {}
+
 type Type struct {
 	Name string
 }
+
+func (t *Type) isNode() {}
