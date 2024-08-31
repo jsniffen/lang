@@ -1,5 +1,7 @@
 package token
 
+import "fmt"
+
 type TokenType string
 
 const (
@@ -32,17 +34,23 @@ var KeywordsMap = map[string]TokenType{
 }
 
 type Token struct {
-	Type   TokenType
-	Value  string
-	Line   int
-	Column int
+	Column   int
+	Filename string
+	Line     int
+	Type     TokenType
+	Value    string
 }
 
-func New(t TokenType, v string, l, c int) Token {
+func New(t TokenType, v string, l, c int, f string) Token {
 	return Token{
-		Type:   t,
-		Value:  v,
-		Line:   l,
-		Column: c,
+		Column:   c,
+		Filename: f,
+		Line:     l,
+		Type:     t,
+		Value:    v,
 	}
+}
+
+func (t Token) Path() string {
+	return fmt.Sprintf("%s:%d:%d", t.Filename, t.Line, t.Column)
 }

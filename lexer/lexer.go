@@ -40,44 +40,44 @@ func (l *Lexer) NextToken() token.Token {
 	line, col := l.line, l.col
 	switch ch := l.ch; ch {
 	case '(':
-		tok = token.New(token.LPAREN, string(l.ch), line, col)
+		tok = token.New(token.LPAREN, string(l.ch), line, col, l.Filename)
 	case ')':
-		tok = token.New(token.RPAREN, string(l.ch), line, col)
+		tok = token.New(token.RPAREN, string(l.ch), line, col, l.Filename)
 	case '{':
-		tok = token.New(token.LBRACE, string(l.ch), line, col)
+		tok = token.New(token.LBRACE, string(l.ch), line, col, l.Filename)
 	case '}':
-		tok = token.New(token.RBRACE, string(l.ch), line, col)
+		tok = token.New(token.RBRACE, string(l.ch), line, col, l.Filename)
 	case '*':
-		tok = token.New(token.ASTERISK, string(l.ch), line, col)
+		tok = token.New(token.ASTERISK, string(l.ch), line, col, l.Filename)
 	case '+':
-		tok = token.New(token.PLUS, string(l.ch), line, col)
+		tok = token.New(token.PLUS, string(l.ch), line, col, l.Filename)
 	case ';':
-		tok = token.New(token.SEMICOLON, string(l.ch), line, col)
+		tok = token.New(token.SEMICOLON, string(l.ch), line, col, l.Filename)
 	case '=':
-		tok = token.New(token.ASSIGN, string(l.ch), line, col)
+		tok = token.New(token.ASSIGN, string(l.ch), line, col, l.Filename)
 	case '/':
-		tok = token.New(token.SLASH, string(l.ch), line, col)
+		tok = token.New(token.SLASH, string(l.ch), line, col, l.Filename)
 	case '-':
-		tok = token.New(token.MINUS, string(l.ch), line, col)
+		tok = token.New(token.MINUS, string(l.ch), line, col, l.Filename)
 	case ',':
-		tok = token.New(token.COMMA, string(l.ch), line, col)
+		tok = token.New(token.COMMA, string(l.ch), line, col, l.Filename)
 	case '"':
 		value := l.eatString()
-		return token.New(token.STRING, value, line, col)
+		return token.New(token.STRING, value, line, col, l.Filename)
 	default:
 		if isAlpha(ch) {
 			value := l.eatIdent()
 			tokenType, ok := token.KeywordsMap[value]
 			if ok {
-				return token.New(tokenType, value, line, col)
+				return token.New(tokenType, value, line, col, l.Filename)
 			} else {
-				return token.New(token.IDENT, value, line, col)
+				return token.New(token.IDENT, value, line, col, l.Filename)
 			}
 		} else if isDigit(ch) {
 			value := l.eatInt()
-			return token.New(token.INT, value, line, col)
+			return token.New(token.INT, value, line, col, l.Filename)
 		} else {
-			return token.New(token.EOF, "", line, col)
+			return token.New(token.EOF, "", line, col, l.Filename)
 		}
 	}
 

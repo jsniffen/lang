@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"lang/ir"
+	"lang/checker"
 	"lang/lexer"
 	"lang/parser"
 	"os"
@@ -13,10 +13,10 @@ func main() {
 	if len(os.Args) > 1 {
 		inputFile = os.Args[1]
 	}
-	outputFile := "out.ll"
-	if len(os.Args) > 2 {
-		outputFile = os.Args[2]
-	}
+	// outputFile := "out.ll"
+	// if len(os.Args) > 2 {
+	// outputFile = os.Args[2]
+	// }
 	l, err := lexer.FromFile(inputFile)
 	if err != nil {
 		panic(err)
@@ -29,8 +29,9 @@ func main() {
 
 	}
 
-	g := ir.New(prog)
-	code := g.Generate()
-	fmt.Println(code)
-	os.WriteFile(outputFile, []byte(code), 0666)
+	ch := checker.New(prog)
+	ch.Check()
+	for _, err := range ch.Errors {
+		fmt.Println(err)
+	}
 }

@@ -3,7 +3,6 @@ package ast
 import (
 	"lang/token"
 	"lang/types"
-	"strconv"
 )
 
 type Node interface {
@@ -19,7 +18,6 @@ type Expression interface {
 	Node
 	isExpression()
 	GetType() *Type
-	GetLocation() *Location
 }
 
 type Program struct {
@@ -39,7 +37,7 @@ type FuncDecl struct {
 	Args       []*FuncArg
 	Body       []Statement
 	Extern     bool
-	Name       string
+	Token      token.Token
 	ReturnType *Type
 }
 
@@ -53,10 +51,6 @@ type IntLiteral struct {
 
 func (il *IntLiteral) isNode()       {}
 func (il *IntLiteral) isExpression() {}
-
-func (il *IntLiteral) GetLocation() *Location {
-	return &Location{strconv.Itoa(il.Value)}
-}
 
 func (il *IntLiteral) GetType() *Type {
 	return &Type{
@@ -86,24 +80,20 @@ func (ie *InfixExpression) isExpression() {}
 
 func (ie *InfixExpression) GetType() *Type { return ie.Type }
 
-func (ie *InfixExpression) GetLocation() *Location { return ie.Location }
-
 type Var struct {
-	Token    token.Token
-	Name     string
-	Type     *Type
-	Location *Location
+	Token token.Token
+
+	// lazily evaluated
+	VarDecl *VarDecl
 }
 
 func (v *Var) isNode()       {}
 func (v *Var) isExpression() {}
 
-func (v *Var) GetLocation() *Location { return v.Location }
-func (v *Var) GetType() *Type         { return v.Type }
+func (v *Var) GetType() *Type { return v.VarDecl.Type }
 
 type VarDecl struct {
 	Location *Location
-	Name     string
 	Token    token.Token
 	Type     *Type
 	Value    Expression

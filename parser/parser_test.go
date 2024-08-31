@@ -4,23 +4,59 @@ import (
 	"fmt"
 	"lang/ast"
 	"lang/lexer"
+	"lang/token"
 	"lang/types"
 	"testing"
 )
 
+func TestVar(t *testing.T) {
+	input := `
+var x i32 = y
+	`
+	want := []ast.Statement{
+		&ast.VarDecl{
+			Token: token.Token{
+				Type:  token.IDENT,
+				Value: "x",
+			},
+			Type: &ast.Type{types.Int32},
+			Value: &ast.Var{
+				Token: token.Token{
+					Type:  token.IDENT,
+					Value: "y",
+				},
+			},
+		},
+	}
+	test(t, input, want)
+}
+
 func TestFuncDecl(t *testing.T) {
 	input := `
-func main() i32 {}
+func main() i32 {
+	return 1
+}
 func test()
 	`
 	want := []ast.Statement{
 		&ast.FuncDecl{
-			Name:       "main",
-			Body:       []ast.Statement{},
+			Token: token.Token{
+				Type:  token.IDENT,
+				Value: "main",
+			},
+			Body: []ast.Statement{
+				&ast.Return{
+					HasValue: true,
+					Value:    &ast.IntLiteral{Value: 1},
+				},
+			},
 			ReturnType: &ast.Type{types.Int32},
 		},
 		&ast.FuncDecl{
-			Name:       "test",
+			Token: token.Token{
+				Type:  token.IDENT,
+				Value: "test",
+			},
 			Body:       []ast.Statement{},
 			ReturnType: &ast.Type{types.Void},
 			Extern:     true,
@@ -36,12 +72,18 @@ var y i32 = 2
 	`
 	want := []ast.Statement{
 		&ast.VarDecl{
-			Name:  "x",
+			Token: token.Token{
+				Type:  token.IDENT,
+				Value: "x",
+			},
 			Type:  &ast.Type{types.Int32},
 			Value: &ast.IntLiteral{Value: 1},
 		},
 		&ast.VarDecl{
-			Name:  "y",
+			Token: token.Token{
+				Type:  token.IDENT,
+				Value: "y",
+			},
 			Type:  &ast.Type{types.Int32},
 			Value: &ast.IntLiteral{Value: 2},
 		},
@@ -66,36 +108,36 @@ func test(t *testing.T, input string, want []ast.Statement) {
 	}
 
 	for i := range got {
-		if err := sameNode(got[i], want[i]); err != nil {
+		if err := checkNode(got[i], want[i]); err != nil {
 			t.Fatalf("[%d] %v", i, err)
 		}
 	}
 }
 
-func sameNode(gotNode, wantNode ast.Node) error {
+func checkNode(gotNode, wantNode ast.Node) error {
 	switch got := gotNode.(type) {
-	case *ast.VarDecl:
-		want, ok := wantNode.(*ast.VarDecl)
-		if !ok {
-			return fmt.Errorf("got *ast.VarDecl, wanted %v", wantNode)
-		}
-		if err := sameVarDecl(got, want); err != nil {
-			return fmt.Errorf("*ast.VarDecl: %v", err)
-		}
 	case *ast.FuncDecl:
 		want, ok := wantNode.(*ast.FuncDecl)
 		if !ok {
 			return fmt.Errorf("got *ast.FuncDecl, wanted %v", wantNode)
 		}
-		if err := sameFuncDecl(got, want); err != nil {
+		if err := checkFuncDecl(got, want); err != nil {
 			return fmt.Errorf("*ast.FuncDecl: %v", err)
+		}
+	case *ast.Return:
+		want, ok := wantNode.(*ast.Return)
+		if !ok {
+			return fmt.Errorf("got *ast.Return, wanted %v", wantNode)
+		}
+		if err := checkReturn(got, want); err != nil {
+			return fmt.Errorf("*ast.Return: %v", err)
 		}
 	case *ast.Type:
 		want, ok := wantNode.(*ast.Type)
 		if !ok {
 			return fmt.Errorf("got *ast.Type, wanted %v", wantNode)
 		}
-		if err := sameType(got, want); err != nil {
+		if err := checkType(got, want); err != nil {
 			return fmt.Errorf("*ast.Type: %v", err)
 		}
 	case *ast.IntLiteral:
@@ -103,8 +145,24 @@ func sameNode(gotNode, wantNode ast.Node) error {
 		if !ok {
 			return fmt.Errorf("got *ast.IntLiteral, wanted %v", wantNode)
 		}
-		if err := sameIntLiteral(got, want); err != nil {
+		if err := checkIntLiteral(got, want); err != nil {
 			return fmt.Errorf("*ast.IntLiteral: %v", err)
+		}
+	case *ast.Var:
+		want, ok := wantNode.(*ast.Var)
+		if !ok {
+			return fmt.Errorf("got *ast.Var, wanted %v", wantNode)
+		}
+		if err := checkVar(got, want); err != nil {
+			return fmt.Errorf("*ast.Var: %v", err)
+		}
+	case *ast.VarDecl:
+		want, ok := wantNode.(*ast.VarDecl)
+		if !ok {
+			return fmt.Errorf("got *ast.VarDecl, wanted %v", wantNode)
+		}
+		if err := checkVarDecl(got, want); err != nil {
+			return fmt.Errorf("*ast.VarDecl: %v", err)
 		}
 	default:
 		return fmt.Errorf("unsupported type, %v", gotNode)
@@ -112,28 +170,52 @@ func sameNode(gotNode, wantNode ast.Node) error {
 	return nil
 }
 
-func sameVarDecl(got, want *ast.VarDecl) error {
-	if err := sameString(got.Name, want.Name); err != nil {
-		return fmt.Errorf("name: %v", err)
+func checkVar(got, want *ast.Var) error {
+	if got.VarDecl != nil {
+		return fmt.Errorf("VarDecl: expected nil, got %v", got.VarDecl)
 	}
 
-	if err := sameType(got.Type, want.Type); err != nil {
-		return fmt.Errorf("type: %v", err)
-	}
-
-	if err := sameNode(got.Value, want.Value); err != nil {
-		return fmt.Errorf("value: %v", err)
+	if err := checkToken(got.Token, want.Token); err != nil {
+		return fmt.Errorf("Name: %v", err)
 	}
 
 	return nil
 }
 
-func sameFuncDecl(got, want *ast.FuncDecl) error {
+func checkToken(got, want token.Token) error {
+	if err := checkString(string(got.Type), string(want.Type)); err != nil {
+		return fmt.Errorf("Type: %v", err)
+	}
+
+	if err := checkString(got.Value, want.Value); err != nil {
+		return fmt.Errorf("Value: %v", err)
+	}
+
+	return nil
+}
+
+func checkVarDecl(got, want *ast.VarDecl) error {
+	if err := checkToken(got.Token, want.Token); err != nil {
+		return fmt.Errorf("Token: %v", err)
+	}
+
+	if err := checkType(got.Type, want.Type); err != nil {
+		return fmt.Errorf("Type: %v", err)
+	}
+
+	if err := checkNode(got.Value, want.Value); err != nil {
+		return fmt.Errorf("Value: %v", err)
+	}
+
+	return nil
+}
+
+func checkFuncDecl(got, want *ast.FuncDecl) error {
 	if len(got.Args) != len(want.Args) {
 		return fmt.Errorf("got %d args, want %d", len(got.Args), len(want.Args))
 	}
 	for i := range got.Args {
-		if err := sameNode(got.Args[i], want.Args[i]); err != nil {
+		if err := checkNode(got.Args[i], want.Args[i]); err != nil {
 			return fmt.Errorf("args [%d]: %v", i, err)
 		}
 	}
@@ -142,53 +224,65 @@ func sameFuncDecl(got, want *ast.FuncDecl) error {
 		return fmt.Errorf("got %d body statements, want %d", len(got.Body), len(want.Body))
 	}
 	for i := range got.Body {
-		if err := sameNode(got.Body[i], want.Body[i]); err != nil {
+		if err := checkNode(got.Body[i], want.Body[i]); err != nil {
 			return fmt.Errorf("body [%d]: %v", i, err)
 		}
 	}
 
-	if err := sameBool(got.Extern, want.Extern); err != nil {
+	if err := checkBool(got.Extern, want.Extern); err != nil {
 		return fmt.Errorf("extern: %v", err)
 	}
 
-	if err := sameString(got.Name, want.Name); err != nil {
-		return fmt.Errorf("name: %v", err)
+	if err := checkToken(got.Token, want.Token); err != nil {
+		return fmt.Errorf("Token: %v", err)
 	}
 
-	if err := sameBool(got.Extern, want.Extern); err != nil {
+	if err := checkBool(got.Extern, want.Extern); err != nil {
 		return err
 	}
 
-	if err := sameNode(got.ReturnType, want.ReturnType); err != nil {
+	if err := checkNode(got.ReturnType, want.ReturnType); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func sameType(got, want *ast.Type) error {
-	return sameString(got.Name, want.Name)
+func checkReturn(got, want *ast.Return) error {
+	if err := checkBool(got.HasValue, want.HasValue); err != nil {
+		return fmt.Errorf("HasValue: %v", err)
+	}
+
+	if err := checkNode(got.Value, want.Value); err != nil {
+		return fmt.Errorf("Value: %v", err)
+	}
+
+	return nil
 }
 
-func sameIntLiteral(got, want *ast.IntLiteral) error {
-	return sameInt(got.Value, want.Value)
+func checkType(got, want *ast.Type) error {
+	return checkString(got.Name, want.Name)
 }
 
-func sameInt(got, want int) error {
+func checkIntLiteral(got, want *ast.IntLiteral) error {
+	return checkInt(got.Value, want.Value)
+}
+
+func checkInt(got, want int) error {
 	if got != want {
 		return fmt.Errorf("got %d, want %d", got, want)
 	}
 	return nil
 }
 
-func sameString(got, want string) error {
+func checkString(got, want string) error {
 	if got != want {
 		return fmt.Errorf("got %s, want %s", got, want)
 	}
 	return nil
 }
 
-func sameBool(got, want bool) error {
+func checkBool(got, want bool) error {
 	if got != want {
 		return fmt.Errorf("got %v, want %v", got, want)
 	}

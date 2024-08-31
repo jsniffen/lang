@@ -132,7 +132,7 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	}
 	p.advance()
 
-	fd.Name = p.curr.Value
+	fd.Token = p.curr
 	p.advance()
 
 	if !p.assertCurrIs(token.LPAREN) {
@@ -200,13 +200,12 @@ func (p *Parser) parseVarDecl() (*ast.VarDecl, bool) {
 	if !p.assertCurrIs(token.VAR) {
 		return nil, false
 	}
-	vd := &ast.VarDecl{Token: p.curr}
 	p.advance()
 
 	if !p.assertCurrIs(token.IDENT) {
 		return nil, false
 	}
-	vd.Name = p.curr.Value
+	vd := &ast.VarDecl{Token: p.curr}
 	p.advance()
 
 	t, ok := p.parseType()
@@ -233,7 +232,7 @@ func (p *Parser) parseVar() (*ast.Var, bool) {
 	if !p.assertCurrIs(token.IDENT) {
 		return nil, false
 	}
-	v := &ast.Var{Token: p.curr, Name: p.curr.Value}
+	v := &ast.Var{Token: p.curr}
 	p.advance()
 
 	return v, true
@@ -350,7 +349,7 @@ func (p *Parser) currPrecedence() int {
 
 func (p *Parser) error(t token.Token, msg string, args ...interface{}) {
 	msg = fmt.Sprintf(msg, args...)
-	err := fmt.Sprintf("%s:%d:%d: %s", p.l.Filename, t.Line, t.Column, msg)
+	err := fmt.Sprintf("%s:%d:%d: %s", t.Filename, t.Line, t.Column, msg)
 	p.Errors = append(p.Errors, err)
 }
 
