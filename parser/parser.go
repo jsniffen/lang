@@ -177,6 +177,14 @@ func (p *Parser) parseFuncBody() ([]ast.Statement, bool) {
 		var ok bool
 
 		switch p.curr.Type {
+		case token.IDENT:
+			switch p.next.Type {
+			case token.LPAREN:
+				stmt, ok = p.parseFuncCall()
+			default:
+				p.errorInvalidToken()
+				ok = false
+			}
 		case token.RETURN:
 			stmt, ok = p.parseReturn()
 		case token.VAR:
@@ -194,6 +202,34 @@ func (p *Parser) parseFuncBody() ([]ast.Statement, bool) {
 	}
 
 	return body, true
+}
+
+func (p *Parser) parseFuncCall() (*ast.FuncCall, bool) {
+	if !p.assertCurrIs(token.IDENT) {
+		return nil, false
+	}
+	fc := &ast.FuncCall{Token: p.curr, Args: make([]ast.Expression, 0)}
+	p.advance()
+
+	if !p.assertCurrIs(token.LPAREN) {
+		return nil, false
+	}
+	p.advance()
+
+	for !p.currIsOrEOF(token.RPAREN) {
+		e, ok := p.parseExpression(LOWEST)
+		if !ok {
+			return nil, false
+		}
+		fc.Args = append(fc.Args, e)
+
+		if p.currIs(token.COMMA) {
+			p.advance()
+		}
+	}
+	p.advance()
+
+	return fc, true
 }
 
 func (p *Parser) parseVarDecl() (*ast.VarDecl, bool) {
@@ -349,7 +385,7 @@ func (p *Parser) currPrecedence() int {
 
 func (p *Parser) error(t token.Token, msg string, args ...interface{}) {
 	msg = fmt.Sprintf(msg, args...)
-	err := fmt.Sprintf("%s:%d:%d: %s", t.Filename, t.Line, t.Column, msg)
+	err := fmt.Sprintf("%s ParseError: %s", t.Path(), msg)
 	p.Errors = append(p.Errors, err)
 }
 

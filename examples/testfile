@@ -1,0 +1,5 @@
+func ExitProcess(u32 exitCode)
+
+func main() {
+	ExitProcess(47)
+}

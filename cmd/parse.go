@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"lang/asm"
 	"lang/checker"
 	"lang/lexer"
 	"lang/parser"
@@ -9,14 +10,14 @@ import (
 )
 
 func main() {
-	inputFile := "deprecated/examples/testfile"
+	inputFile := "examples/testfile"
 	if len(os.Args) > 1 {
 		inputFile = os.Args[1]
 	}
-	// outputFile := "out.ll"
-	// if len(os.Args) > 2 {
-	// outputFile = os.Args[2]
-	// }
+	outputFile := "out.asm"
+	if len(os.Args) > 2 {
+		outputFile = os.Args[2]
+	}
 	l, err := lexer.FromFile(inputFile)
 	if err != nil {
 		panic(err)
@@ -34,4 +35,9 @@ func main() {
 	for _, err := range ch.Errors {
 		fmt.Println(err)
 	}
+
+	a := asm.New(prog)
+	code := a.Generate()
+	fmt.Println(code)
+	os.WriteFile(outputFile, []byte(code), 0666)
 }

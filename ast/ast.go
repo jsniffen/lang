@@ -25,13 +25,21 @@ type Program struct {
 }
 
 type FuncArg struct {
-	Name     string
-	Type     *Type
-	Location *Location
+	Name string
+	Type *Type
 }
 
 func (fa *FuncArg) isNode()      {}
 func (fa *FuncArg) isStatement() {}
+
+type FuncCall struct {
+	Token token.Token
+	Args  []Expression
+}
+
+func (fa *FuncCall) isNode()       {}
+func (fa *FuncCall) isStatement()  {}
+func (fa *FuncCall) isExpression() {}
 
 type FuncDecl struct {
 	Args       []*FuncArg
@@ -68,11 +76,10 @@ func (r *Return) isNode()      {}
 func (r *Return) isStatement() {}
 
 type InfixExpression struct {
-	Token    token.Token
-	Left     Expression
-	Right    Expression
-	Location *Location
-	Type     *Type
+	Token token.Token
+	Left  Expression
+	Right Expression
+	Type  *Type
 }
 
 func (ie *InfixExpression) isNode()       {}
@@ -93,23 +100,17 @@ func (v *Var) isExpression() {}
 func (v *Var) GetType() *Type { return v.VarDecl.Type }
 
 type VarDecl struct {
-	Location *Location
-	Token    token.Token
-	Type     *Type
-	Value    Expression
+	Token token.Token
+	Type  *Type
+	Value Expression
 }
 
 func (vd *VarDecl) isNode()      {}
 func (vd *VarDecl) isStatement() {}
 
-type Location struct {
-	Name string
-}
-
-func (l *Location) isNode() {}
-
 type Type struct {
 	Name string
 }
 
-func (t *Type) isNode() {}
+func (t *Type) isNode() {
+}
