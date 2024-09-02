@@ -68,7 +68,7 @@ func (c *Checker) checkExpression(e ast.Expression) {
 	case *ast.IntLiteral:
 		return
 	default:
-		panic(v)
+		panic(fmt.Sprintf("checking unsupported expression: %T", v))
 	}
 }
 

@@ -24,6 +24,8 @@ type Program struct {
 	Statements []Statement
 }
 
+func (p *Program) isNode() {}
+
 type FuncArg struct {
 	Name string
 	Type *Type
