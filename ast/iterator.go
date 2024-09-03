@@ -42,14 +42,13 @@ func (it *Iterator) Next() (Node, bool) {
 	case *InfixExpression:
 		it.push(v.Right)
 		it.push(v.Left)
-	case *FuncArg:
 	case *FuncCall:
 		for i := len(v.Args) - 1; i >= 0; i-- {
 			it.push(v.Args[i])
 		}
 	case *FuncDecl:
-		for i := len(v.Args) - 1; i >= 0; i-- {
-			it.push(v.Args[i])
+		for i := len(v.Params) - 1; i >= 0; i-- {
+			it.push(v.Params[i])
 		}
 		for i := len(v.Body) - 1; i >= 0; i-- {
 			it.push(v.Body[i])
@@ -61,6 +60,7 @@ func (it *Iterator) Next() (Node, bool) {
 	case *VarDecl:
 		it.push(v.Value)
 	case *Var:
+	case *EmptyExpression:
 	default:
 		panic(fmt.Sprintf("Iterator error: unsupported Node: %T", v))
 	}

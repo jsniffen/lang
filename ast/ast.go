@@ -48,7 +48,7 @@ func (fc *FuncCall) Type() *Type      { return fc.FuncDecl.ReturnType }
 func (fc *FuncCall) Location() string { return fc.Register }
 
 type FuncDecl struct {
-	Args       []*FuncArg
+	Params     []*VarDecl
 	Body       []Statement
 	Extern     bool
 	Token      token.Token
@@ -119,3 +119,10 @@ type Type struct {
 
 func (t *Type) isNode() {
 }
+
+type EmptyExpression struct{}
+
+func (ee *EmptyExpression) isNode()          {}
+func (ee *EmptyExpression) isExpression()    {}
+func (ee *EmptyExpression) Type() *Type      { return Empty }
+func (ee *EmptyExpression) Location() string { return "" }

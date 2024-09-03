@@ -129,6 +129,7 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	fd := &ast.FuncDecl{
 		Extern:     true,
 		ReturnType: &ast.Type{Name: types.Void},
+		Params:     make([]*ast.VarDecl, 0),
 	}
 	var ok bool
 
@@ -145,10 +146,15 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	}
 	p.advance()
 
-	if !p.currIs(token.RPAREN) {
-		fd.Args, ok = p.parseFuncArgs()
+	for !p.currIs(token.RPAREN) {
+		vd, ok := p.parseFuncParam()
 		if !ok {
 			return nil, false
+		}
+		fd.Params = append(fd.Params, vd)
+
+		if p.currIs(token.COMMA) {
+			p.advance()
 		}
 	}
 	p.advance()
@@ -298,32 +304,22 @@ func (p *Parser) parseReturn() (*ast.Return, bool) {
 	return r, true
 }
 
-func (p *Parser) parseFuncArgs() ([]*ast.FuncArg, bool) {
-	args := make([]*ast.FuncArg, 0)
+func (p *Parser) parseFuncParam() (*ast.VarDecl, bool) {
+	vd := &ast.VarDecl{Value: &ast.EmptyExpression{}}
 
-	for !p.currIsOrEOF(token.RPAREN) {
-		fa := &ast.FuncArg{}
-		var ok bool
-
-		if !p.assertCurrIs(token.IDENT) {
-			return nil, false
-		}
-		fa.Name = p.curr.Value
-		p.advance()
-
-		fa.Type, ok = p.parseType()
-		if !ok {
-			return nil, false
-		}
-
-		if p.currIs(token.COMMA) {
-			p.advance()
-		}
-
-		args = append(args, fa)
+	if !p.assertCurrIs(token.IDENT) {
+		return nil, false
 	}
+	vd.Token = p.curr
+	p.advance()
 
-	return args, true
+	t, ok := p.parseType()
+	if !ok {
+		return nil, false
+	}
+	vd.Type = t
+
+	return vd, true
 }
 
 func (p *Parser) parseType() (*ast.Type, bool) {

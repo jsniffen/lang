@@ -69,6 +69,7 @@ func (c *Checker) checkExpression(e ast.Expression) {
 	case *ast.FuncCall:
 		c.checkFuncCall(v)
 	case *ast.IntLiteral:
+	case *ast.EmptyExpression:
 	default:
 		panic(fmt.Sprintf("checking unsupported expression: %T", v))
 	}
@@ -96,9 +97,9 @@ func (c *Checker) checkFuncDecl(fd *ast.FuncDecl) {
 	c.pushContext()
 	defer c.popContext()
 
-	// for _, a := range fd.Args {
-	// c.checkVarDecl(a)
-	// }
+	for _, vd := range fd.Params {
+		c.checkVarDecl(vd)
+	}
 
 	for _, s := range fd.Body {
 		switch v := s.(type) {

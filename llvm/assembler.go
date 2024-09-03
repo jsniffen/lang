@@ -49,6 +49,7 @@ func (a *Assembler) generateNode(n ast.Node) int {
 		a.generateVar(v)
 	case *ast.VarDecl:
 		a.generateVarDecl(v)
+	case *ast.EmptyExpression:
 	case *ast.IntLiteral:
 	default:
 		panic(fmt.Sprintf("cannot generate node: %T", v))
@@ -57,16 +58,39 @@ func (a *Assembler) generateNode(n ast.Node) int {
 }
 
 func (a *Assembler) generateFuncCall(fc *ast.FuncCall) {
-	for _, arg := range fc.Args {
-		if a.generateNode(arg) > 0 {
+	for i := range fc.FuncDecl.Params {
+		// val := fc.FuncDecl.Params[i].Value
+
+		fc.FuncDecl.Params[i].Value = fc.Args[i]
+		if a.generateNode(fc.FuncDecl.Params[i]) > 0 {
 			a.newLine()
 		}
+
+		// fc.FuncDecl.Params[i].Value = val
 	}
+
+	// for _, param := range fc.FuncDecl.Params {
+	// param.Value =
+	// }
+	//
+	// for _, arg := range fc.Args {
+	// if a.generateNode(arg) > 0 {
+	// a.newLine()
+	// }
+	// }
 
 	fc.Register = a.getRegister()
 	a.writef("%s = call ", fc.Register)
 	a.generateType(fc.FuncDecl.ReturnType)
-	a.writef(" @%s()", fc.Token.Value)
+	a.writef(" @%s(", fc.Token.Value)
+
+	for i, p := range fc.FuncDecl.Params {
+		a.writef("ptr %%%s", p.Token.Value)
+		if i < len(fc.FuncDecl.Params)-1 {
+			a.write(", ")
+		}
+	}
+	a.write(")")
 }
 
 func (a *Assembler) generateFuncDecl(fd *ast.FuncDecl) {
@@ -78,9 +102,13 @@ func (a *Assembler) generateFuncDecl(fd *ast.FuncDecl) {
 	a.generateNode(fd.ReturnType)
 	a.write(" @")
 	a.write(fd.Token.Value)
-	a.write(" (")
-	for _, n := range fd.Args {
-		a.generateNode(n)
+	a.write("(")
+	for i, vd := range fd.Params {
+		a.writef("ptr %%%s", vd.Token.Value)
+
+		if i < len(fd.Params)-1 {
+			a.write(", ")
+		}
 	}
 	a.write(")")
 

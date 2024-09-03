@@ -1,4 +1,4 @@
-go run cmd\parse.go
+go run cmd\compile.go
 clang out.ll
 a.exe
 echo %ERRORLEVEL%
