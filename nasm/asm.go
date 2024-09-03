@@ -1,4 +1,4 @@
-package asm
+package nasm
 
 import (
 	"bytes"

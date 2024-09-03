@@ -2,7 +2,6 @@ package ast
 
 import (
 	"lang/token"
-	"lang/types"
 )
 
 type Node interface {
@@ -17,7 +16,8 @@ type Statement interface {
 type Expression interface {
 	Node
 	isExpression()
-	GetType() *Type
+	Type() *Type
+	Location() string
 }
 
 type Program struct {
@@ -35,13 +35,17 @@ func (fa *FuncArg) isNode()      {}
 func (fa *FuncArg) isStatement() {}
 
 type FuncCall struct {
-	Token token.Token
-	Args  []Expression
+	Token    token.Token
+	Args     []Expression
+	FuncDecl *FuncDecl
+	Register string
 }
 
-func (fa *FuncCall) isNode()       {}
-func (fa *FuncCall) isStatement()  {}
-func (fa *FuncCall) isExpression() {}
+func (fc *FuncCall) isNode()          {}
+func (fc *FuncCall) isStatement()     {}
+func (fc *FuncCall) isExpression()    {}
+func (fc *FuncCall) Type() *Type      { return fc.FuncDecl.ReturnType }
+func (fc *FuncCall) Location() string { return fc.Register }
 
 type FuncDecl struct {
 	Args       []*FuncArg
@@ -59,14 +63,10 @@ type IntLiteral struct {
 	Value int
 }
 
-func (il *IntLiteral) isNode()       {}
-func (il *IntLiteral) isExpression() {}
-
-func (il *IntLiteral) GetType() *Type {
-	return &Type{
-		Name: types.Int32,
-	}
-}
+func (il *IntLiteral) isNode()          {}
+func (il *IntLiteral) isExpression()    {}
+func (il *IntLiteral) Type() *Type      { return Int32 }
+func (il *IntLiteral) Location() string { return il.Token.Value }
 
 type Return struct {
 	Token    token.Token
@@ -78,28 +78,31 @@ func (r *Return) isNode()      {}
 func (r *Return) isStatement() {}
 
 type InfixExpression struct {
-	Token token.Token
-	Left  Expression
-	Right Expression
-	Type  *Type
+	Token    token.Token
+	Left     Expression
+	Right    Expression
+	Register string
 }
 
-func (ie *InfixExpression) isNode()       {}
-func (ie *InfixExpression) isExpression() {}
-
-func (ie *InfixExpression) GetType() *Type { return ie.Type }
+func (ie *InfixExpression) isNode()          {}
+func (ie *InfixExpression) isExpression()    {}
+func (ie *InfixExpression) Type() *Type      { return ie.Left.Type() }
+func (ie *InfixExpression) Location() string { return ie.Register }
 
 type Var struct {
 	Token token.Token
 
-	// lazily evaluated
+	// set by checker
 	VarDecl *VarDecl
+
+	// set by assembler
+	Register string
 }
 
-func (v *Var) isNode()       {}
-func (v *Var) isExpression() {}
-
-func (v *Var) GetType() *Type { return v.VarDecl.Type }
+func (v *Var) isNode()          {}
+func (v *Var) isExpression()    {}
+func (v *Var) Type() *Type      { return v.VarDecl.Type }
+func (v *Var) Location() string { return v.Register }
 
 type VarDecl struct {
 	Token token.Token

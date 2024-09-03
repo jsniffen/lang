@@ -6,7 +6,7 @@ type TokenType string
 
 const (
 	ASSIGN    = "="
-	ASTERISK  = "ASTERISK"
+	ASTERISK  = "*"
 	COMMA     = ","
 	EOF       = "EOF"
 	EXTERN    = "EXTERN"

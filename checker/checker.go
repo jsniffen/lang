@@ -10,8 +10,6 @@ type Checker struct {
 	program *ast.Program
 	context *Context
 	Errors  []string
-
-	Filename string
 }
 
 func New(p *ast.Program) *Checker {
@@ -27,21 +25,20 @@ func (c *Checker) Check() {
 	for _, stmt := range c.program.Statements {
 		switch v := stmt.(type) {
 		case *ast.FuncDecl:
-			c.checkFuncDecl(v)
+			c.checkFuncDeclDup(v)
 			c.context.funcs[v.Token.Value] = v
 		case *ast.VarDecl:
 			c.checkVarDecl(v)
-			c.context.vars[v.Token.Value] = v
 		default:
 			panic("unsupported type")
 		}
 	}
+
+	c.checkFuncDecls()
 }
 
-func (c *Checker) checkFuncDecl(fd *ast.FuncDecl) {
-	if dup, ok := c.context.getFuncDecl(fd.Token.Value); ok {
-		c.errorDuplicate(fd.Token, dup.Token)
-	}
+func (c *Checker) checkReturn(r *ast.Return) {
+	c.checkExpression(r.Value)
 }
 
 func (c *Checker) checkVar(v *ast.Var) {
@@ -59,16 +56,75 @@ func (c *Checker) checkVarDecl(vd *ast.VarDecl) {
 	}
 
 	c.checkExpression(vd.Value)
+
+	c.context.vars[vd.Token.Value] = vd
 }
 
 func (c *Checker) checkExpression(e ast.Expression) {
 	switch v := e.(type) {
 	case *ast.Var:
 		c.checkVar(v)
+	case *ast.InfixExpression:
+		c.checkInfixExpression(v)
+	case *ast.FuncCall:
+		c.checkFuncCall(v)
 	case *ast.IntLiteral:
-		return
 	default:
 		panic(fmt.Sprintf("checking unsupported expression: %T", v))
+	}
+}
+
+func (c *Checker) checkInfixExpression(ie *ast.InfixExpression) {
+	c.checkExpression(ie.Left)
+	c.checkExpression(ie.Right)
+}
+
+func (c *Checker) checkFuncArg(fc *ast.FuncArg) {
+
+}
+
+func (c *Checker) checkFuncCall(fc *ast.FuncCall) {
+	fd, ok := c.context.getFuncDecl(fc.Token.Value)
+	if !ok {
+		c.errorNotFound(fc.Token, fc.Token.Value)
+	}
+
+	fc.FuncDecl = fd
+}
+
+func (c *Checker) checkFuncDecl(fd *ast.FuncDecl) {
+	c.pushContext()
+	defer c.popContext()
+
+	// for _, a := range fd.Args {
+	// c.checkVarDecl(a)
+	// }
+
+	for _, s := range fd.Body {
+		switch v := s.(type) {
+		case *ast.VarDecl:
+			c.checkVarDecl(v)
+		case *ast.Return:
+			c.checkReturn(v)
+		default:
+			panic(fmt.Sprintf("cannot check body %T", v))
+		}
+	}
+}
+
+func (c *Checker) checkFuncDecls() {
+	it := ast.NewIterator(c.program)
+	for n, ok := it.Next(); ok; n, ok = it.Next() {
+		switch v := n.(type) {
+		case *ast.FuncDecl:
+			c.checkFuncDecl(v)
+		}
+	}
+}
+
+func (c *Checker) checkFuncDeclDup(fd *ast.FuncDecl) {
+	if dup, ok := c.context.getFuncDecl(fd.Token.Value); ok {
+		c.errorDuplicate(fd.Token, dup.Token)
 	}
 }
 
@@ -84,4 +140,14 @@ func (c *Checker) errorDuplicate(t, dup token.Token) {
 
 func (c *Checker) errorNotFound(t token.Token, name string) {
 	c.error(t, "%s not declared", name)
+}
+
+func (c *Checker) pushContext() {
+	c.context = newContext(c.context)
+}
+
+func (c *Checker) popContext() {
+	if c.context.outer != nil {
+		c.context = c.context.outer
+	}
 }

@@ -1,5 +1,7 @@
-func ExitProcess(u32 exitCode)
+func add() i32 {
+	return 1 - 2
+}
 
-func main() {
-	ExitProcess(47)
+func main() i32 {
+	return add()
 }

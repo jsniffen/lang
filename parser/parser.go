@@ -73,7 +73,12 @@ func (p *Parser) parseExpression(precedence int) (ast.Expression, bool) {
 	case token.INT:
 		left, ok = p.parseIntLiteral()
 	case token.IDENT:
-		left, ok = p.parseVar()
+		switch p.next.Type {
+		case token.LPAREN:
+			left, ok = p.parseFuncCall()
+		default:
+			left, ok = p.parseVar()
+		}
 	default:
 		p.errorInvalidToken()
 		ok = false

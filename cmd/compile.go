@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"lang/asm"
 	"lang/checker"
 	"lang/lexer"
+	"lang/llvm"
 	"lang/parser"
 	"os"
 )
@@ -14,7 +14,7 @@ func main() {
 	if len(os.Args) > 1 {
 		inputFile = os.Args[1]
 	}
-	outputFile := "out.asm"
+	outputFile := "out.ll"
 	if len(os.Args) > 2 {
 		outputFile = os.Args[2]
 	}
@@ -25,18 +25,24 @@ func main() {
 	p := parser.New(l)
 
 	prog, _ := p.ParseProgram()
-	for _, err := range p.Errors {
-		fmt.Println(err)
-
+	if len(p.Errors) > 0 {
+		for _, err := range p.Errors {
+			fmt.Println(err)
+		}
+		return
 	}
 
 	ch := checker.New(prog)
 	ch.Check()
-	for _, err := range ch.Errors {
-		fmt.Println(err)
+
+	if len(ch.Errors) > 0 {
+		for _, err := range ch.Errors {
+			fmt.Println(err)
+		}
+		return
 	}
 
-	a := asm.New(prog)
+	a := llvm.New(prog)
 	code := a.Generate()
 	fmt.Println(code)
 	os.WriteFile(outputFile, []byte(code), 0666)
