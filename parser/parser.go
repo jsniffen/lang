@@ -127,9 +127,8 @@ func (p *Parser) parseInfixExpression(left ast.Expression) (ast.Expression, bool
 
 func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 	fd := &ast.FuncDecl{
-		Extern:     true,
-		ReturnType: &ast.Type{Name: types.Void},
-		Params:     make([]*ast.VarDecl, 0),
+		Extern: true,
+		Params: make([]*ast.VarDecl, 0),
 	}
 	var ok bool
 
@@ -164,6 +163,7 @@ func (p *Parser) parseFuncDecl() (*ast.FuncDecl, bool) {
 		if !ok {
 			return nil, false
 		}
+		fd.HasReturn = true
 	}
 
 	if p.currIs(token.LBRACE) {
@@ -326,9 +326,9 @@ func (p *Parser) parseType() (*ast.Type, bool) {
 	if !p.assertCurrIs(token.IDENT) {
 		return nil, false
 	}
-	name := p.curr.Value
+	t := &ast.Type{Token: p.curr, Type: types.FromToken(p.curr)}
 	p.advance()
-	return &ast.Type{Name: name}, true
+	return t, true
 }
 
 func (p *Parser) parseIntLiteral() (*ast.IntLiteral, bool) {

@@ -2,6 +2,7 @@ package ast
 
 import (
 	"lang/token"
+	"lang/types"
 )
 
 type Node interface {
@@ -16,7 +17,7 @@ type Statement interface {
 type Expression interface {
 	Node
 	isExpression()
-	Type() *Type
+	Type() types.Type
 	Location() string
 }
 
@@ -44,7 +45,7 @@ type FuncCall struct {
 func (fc *FuncCall) isNode()          {}
 func (fc *FuncCall) isStatement()     {}
 func (fc *FuncCall) isExpression()    {}
-func (fc *FuncCall) Type() *Type      { return fc.FuncDecl.ReturnType }
+func (fc *FuncCall) Type() types.Type { return fc.FuncDecl.ReturnType.Type }
 func (fc *FuncCall) Location() string { return fc.Register }
 
 type FuncDecl struct {
@@ -52,6 +53,7 @@ type FuncDecl struct {
 	Body       []Statement
 	Extern     bool
 	Token      token.Token
+	HasReturn  bool
 	ReturnType *Type
 }
 
@@ -65,7 +67,7 @@ type IntLiteral struct {
 
 func (il *IntLiteral) isNode()          {}
 func (il *IntLiteral) isExpression()    {}
-func (il *IntLiteral) Type() *Type      { return Int32 }
+func (il *IntLiteral) Type() types.Type { return types.Int32 }
 func (il *IntLiteral) Location() string { return il.Token.Value }
 
 type Return struct {
@@ -86,7 +88,7 @@ type InfixExpression struct {
 
 func (ie *InfixExpression) isNode()          {}
 func (ie *InfixExpression) isExpression()    {}
-func (ie *InfixExpression) Type() *Type      { return ie.Left.Type() }
+func (ie *InfixExpression) Type() types.Type { return ie.Left.Type() }
 func (ie *InfixExpression) Location() string { return ie.Register }
 
 type Var struct {
@@ -101,28 +103,39 @@ type Var struct {
 
 func (v *Var) isNode()          {}
 func (v *Var) isExpression()    {}
-func (v *Var) Type() *Type      { return v.VarDecl.Type }
+func (v *Var) Type() types.Type { return v.VarDecl.Type.Type }
 func (v *Var) Location() string { return v.Register }
 
 type VarDecl struct {
-	Token token.Token
-	Type  *Type
-	Value Expression
+	Token    token.Token
+	Type     *Type
+	Value    Expression
+	Register string
 }
 
 func (vd *VarDecl) isNode()      {}
 func (vd *VarDecl) isStatement() {}
 
 type Type struct {
-	Name string
+	Token token.Token
+	Type  types.Type
 }
 
-func (t *Type) isNode() {
-}
+func (t *Type) isNode() {}
 
 type EmptyExpression struct{}
 
 func (ee *EmptyExpression) isNode()          {}
 func (ee *EmptyExpression) isExpression()    {}
-func (ee *EmptyExpression) Type() *Type      { return Empty }
+func (ee *EmptyExpression) Type() types.Type { return types.Nil }
 func (ee *EmptyExpression) Location() string { return "" }
+
+type RegisterExpression struct {
+	RegisterType types.Type
+	Register     string
+}
+
+func (re *RegisterExpression) isNode()          {}
+func (re *RegisterExpression) isExpression()    {}
+func (re *RegisterExpression) Type() types.Type { return re.RegisterType }
+func (re *RegisterExpression) Location() string { return re.Register }

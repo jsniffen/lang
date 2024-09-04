@@ -44,13 +44,13 @@ func (a *Assembler) generateNode(n ast.Node) int {
 	case *ast.Return:
 		a.generateReturn(v)
 	case *ast.Type:
-		a.generateType(v)
 	case *ast.Var:
 		a.generateVar(v)
 	case *ast.VarDecl:
 		a.generateVarDecl(v)
 	case *ast.EmptyExpression:
 	case *ast.IntLiteral:
+	case *ast.RegisterExpression:
 	default:
 		panic(fmt.Sprintf("cannot generate node: %T", v))
 	}
@@ -58,34 +58,16 @@ func (a *Assembler) generateNode(n ast.Node) int {
 }
 
 func (a *Assembler) generateFuncCall(fc *ast.FuncCall) {
-	for i := range fc.FuncDecl.Params {
-		// val := fc.FuncDecl.Params[i].Value
-
-		fc.FuncDecl.Params[i].Value = fc.Args[i]
-		if a.generateNode(fc.FuncDecl.Params[i]) > 0 {
+	for _, arg := range fc.Args {
+		if a.generateNode(arg) > 0 {
 			a.newLine()
 		}
-
-		// fc.FuncDecl.Params[i].Value = val
 	}
 
-	// for _, param := range fc.FuncDecl.Params {
-	// param.Value =
-	// }
-	//
-	// for _, arg := range fc.Args {
-	// if a.generateNode(arg) > 0 {
-	// a.newLine()
-	// }
-	// }
-
 	fc.Register = a.getRegister()
-	a.writef("%s = call ", fc.Register)
-	a.generateType(fc.FuncDecl.ReturnType)
-	a.writef(" @%s(", fc.Token.Value)
-
-	for i, p := range fc.FuncDecl.Params {
-		a.writef("ptr %%%s", p.Token.Value)
+	a.writef("%s = call %s @%s(", fc.Register, fc.FuncDecl.ReturnType.Type.Name(), fc.Token.Value)
+	for i, arg := range fc.Args {
+		a.writef("%s %s", arg.Type().Name(), arg.Location())
 		if i < len(fc.FuncDecl.Params)-1 {
 			a.write(", ")
 		}
@@ -94,30 +76,44 @@ func (a *Assembler) generateFuncCall(fc *ast.FuncCall) {
 }
 
 func (a *Assembler) generateFuncDecl(fd *ast.FuncDecl) {
+	a.resetRegister()
+
 	if fd.Extern {
 		a.write("declare ")
 	} else {
 		a.write("define ")
 	}
-	a.generateNode(fd.ReturnType)
-	a.write(" @")
-	a.write(fd.Token.Value)
-	a.write("(")
+	a.writef("%s @%s(", fd.ReturnType.Type.Name(), fd.Token.Value)
+
 	for i, vd := range fd.Params {
-		a.writef("ptr %%%s", vd.Token.Value)
+		reg := a.getRegister()
+		a.writef("%s %s", vd.Type.Type.Name(), reg)
 
 		if i < len(fd.Params)-1 {
 			a.write(", ")
 		}
+
+		vd.Value = &ast.RegisterExpression{
+			Register:     reg,
+			RegisterType: vd.Type.Type,
+		}
 	}
 	a.write(")")
+	a.getRegister()
 
 	if !fd.Extern {
 		a.write(" {")
 		a.indent()
-		for _, n := range fd.Body {
-			a.newLine()
-			a.generateNode(n)
+		a.newLine()
+		for _, n := range fd.Params {
+			if a.generateNode(n) > 0 {
+				a.newLine()
+			}
+		}
+		for i, n := range fd.Body {
+			if a.generateNode(n) > 0 && i < len(fd.Body)-1 {
+				a.newLine()
+			}
 		}
 		a.unindent()
 		a.newLine()
@@ -146,41 +142,37 @@ func (a *Assembler) generateInfixExpression(ie *ast.InfixExpression) {
 	default:
 		panic(fmt.Sprintf("cannot generate InfixExpression: %s", ie.Token.Value))
 	}
-	a.generateNode(ie.Type())
+	a.write(ie.Type().Name())
 	a.writef(" %s, %s", ie.Left.Location(), ie.Right.Location())
 }
 
 func (a *Assembler) generateReturn(r *ast.Return) {
 	a.generateNode(r.Value)
 	a.newLine()
-	a.write("ret ")
-	a.generateNode(r.Value.Type())
-	a.writef(" %s", r.Value.Location())
+	a.writef("ret %s %s", r.Value.Type().Name(), r.Value.Location())
 }
 
 func (a *Assembler) generateType(t *ast.Type) {
-	a.write(t.Name)
+	a.write(t.Type.Name())
 }
 
 func (a *Assembler) generateVar(v *ast.Var) {
 	v.Register = a.getRegister()
-	a.writef("%s = load ", v.Register)
-	a.generateNode(v.VarDecl.Type)
-	a.writef(", ptr %%%s", v.VarDecl.Token.Value)
+	a.writef("%s = load %s, ptr %%%s", v.Register, v.VarDecl.Type.Type.Name(), v.VarDecl.Token.Value)
 }
 
 func (a *Assembler) generateVarDecl(vd *ast.VarDecl) {
-	a.writef("%%%s = alloca ", vd.Token.Value)
-	a.generateNode(vd.Type)
+	a.writef("%%%s = alloca %s", vd.Token.Value, vd.Type.Type.Name())
 	a.newLine()
 
 	if a.generateNode(vd.Value) > 0 {
 		a.newLine()
 	}
 
-	a.write("store ")
-	a.generateNode(vd.Value.Type())
-	a.writef(" %s, ptr %%%s", vd.Value.Location(), vd.Token.Value)
+	_, ok := vd.Value.(*ast.EmptyExpression)
+	if !ok {
+		a.writef("store %s %s, ptr %%%s", vd.Type.Type.Name(), vd.Value.Location(), vd.Token.Value)
+	}
 }
 
 func (a *Assembler) indent() {
@@ -199,6 +191,10 @@ func (a *Assembler) newLine() {
 	for i := 0; i < a.ind; i++ {
 		a.out.WriteString("\t")
 	}
+}
+
+func (a *Assembler) resetRegister() {
+	a.reg = 0
 }
 
 func (a *Assembler) getRegister() string {
