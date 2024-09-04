@@ -19,7 +19,7 @@ var x i32 = y
 				Type:  token.IDENT,
 				Value: "x",
 			},
-			Type: &ast.Type{types.Int32},
+			Type: &ast.Type{Type: types.Int32},
 			Value: &ast.Var{
 				Token: token.Token{
 					Type:  token.IDENT,
@@ -33,7 +33,7 @@ var x i32 = y
 
 func TestFuncDecl(t *testing.T) {
 	input := `
-func main() i32 {
+func main(x ^^i32) i32 {
 	return 1
 }
 func test()
@@ -44,22 +44,38 @@ func test()
 				Type:  token.IDENT,
 				Value: "main",
 			},
+			Params: []*ast.VarDecl{
+				&ast.VarDecl{
+					Token: token.Token{
+						Type:  token.IDENT,
+						Value: "x",
+					},
+					Type: &ast.Type{
+						Type: &types.Pointer{
+							To: &types.Pointer{
+								To: types.Int32,
+							},
+						},
+					},
+					Value: &ast.EmptyExpression{},
+				},
+			},
 			Body: []ast.Statement{
 				&ast.Return{
 					HasValue: true,
 					Value:    &ast.IntLiteral{Value: 1},
 				},
 			},
-			ReturnType: &ast.Type{types.Int32},
+			HasReturn:  true,
+			ReturnType: &ast.Type{Type: types.Int32},
 		},
 		&ast.FuncDecl{
 			Token: token.Token{
 				Type:  token.IDENT,
 				Value: "test",
 			},
-			Body:       []ast.Statement{},
-			ReturnType: &ast.Type{types.Void},
-			Extern:     true,
+			Body:   []ast.Statement{},
+			Extern: true,
 		},
 	}
 	test(t, input, want)
@@ -76,7 +92,7 @@ var y i32 = 2
 				Type:  token.IDENT,
 				Value: "x",
 			},
-			Type:  &ast.Type{types.Int32},
+			Type:  &ast.Type{Type: types.Int32},
 			Value: &ast.IntLiteral{Value: 1},
 		},
 		&ast.VarDecl{
@@ -84,7 +100,7 @@ var y i32 = 2
 				Type:  token.IDENT,
 				Value: "y",
 			},
-			Type:  &ast.Type{types.Int32},
+			Type:  &ast.Type{Type: types.Int32},
 			Value: &ast.IntLiteral{Value: 2},
 		},
 	}
@@ -164,8 +180,13 @@ func checkNode(gotNode, wantNode ast.Node) error {
 		if err := checkVarDecl(got, want); err != nil {
 			return fmt.Errorf("*ast.VarDecl: %v", err)
 		}
+	case *ast.EmptyExpression:
+		_, ok := wantNode.(*ast.EmptyExpression)
+		if !ok {
+			return fmt.Errorf("got *ast.EmptyExpression, wanted %T", wantNode)
+		}
 	default:
-		return fmt.Errorf("unsupported type, %v", gotNode)
+		return fmt.Errorf("unsupported type, %T", gotNode)
 	}
 	return nil
 }
@@ -211,11 +232,11 @@ func checkVarDecl(got, want *ast.VarDecl) error {
 }
 
 func checkFuncDecl(got, want *ast.FuncDecl) error {
-	if len(got.Args) != len(want.Args) {
-		return fmt.Errorf("got %d args, want %d", len(got.Args), len(want.Args))
+	if len(got.Params) != len(want.Params) {
+		return fmt.Errorf("got %d params, want %d", len(got.Params), len(want.Params))
 	}
-	for i := range got.Args {
-		if err := checkNode(got.Args[i], want.Args[i]); err != nil {
+	for i := range got.Params {
+		if err := checkNode(got.Params[i], want.Params[i]); err != nil {
 			return fmt.Errorf("args [%d]: %v", i, err)
 		}
 	}
@@ -241,8 +262,14 @@ func checkFuncDecl(got, want *ast.FuncDecl) error {
 		return err
 	}
 
-	if err := checkNode(got.ReturnType, want.ReturnType); err != nil {
-		return err
+	if err := checkBool(got.HasReturn, want.HasReturn); err != nil {
+		return fmt.Errorf("HasReturn: %v", err)
+	}
+
+	if got.HasReturn {
+		if err := checkNode(got.ReturnType, want.ReturnType); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -261,7 +288,21 @@ func checkReturn(got, want *ast.Return) error {
 }
 
 func checkType(got, want *ast.Type) error {
-	return checkString(got.Name, want.Name)
+	if err := checkTypeType(got.Type, want.Type); err != nil {
+		return fmt.Errorf("Type: %v", err)
+	}
+
+	return nil
+}
+
+func checkTypeType(gotType, wantType types.Type) error {
+	switch got := gotType.(type) {
+	case *types.Pointer:
+		want := wantType.(*types.Pointer)
+		return checkTypeType(got.To, want.To)
+	default:
+		return checkString(gotType.Name(), wantType.Name())
+	}
 }
 
 func checkIntLiteral(got, want *ast.IntLiteral) error {

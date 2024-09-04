@@ -17,6 +17,7 @@ const (
 	LPAREN    = "("
 	MINUS     = "-"
 	PLUS      = "+"
+	POINTER   = "^"
 	RBRACE    = "}"
 	RETURN    = "RETURN"
 	RPAREN    = ")"

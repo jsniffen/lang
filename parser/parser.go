@@ -323,11 +323,34 @@ func (p *Parser) parseFuncParam() (*ast.VarDecl, bool) {
 }
 
 func (p *Parser) parseType() (*ast.Type, bool) {
+	t := &ast.Type{}
+
+	var ptr *types.Pointer
+
+	if p.currIs(token.POINTER) {
+		ptr = &types.Pointer{}
+		t.Type = ptr
+		p.advance()
+	}
+
+	for p.currIs(token.POINTER) {
+		to := &types.Pointer{}
+		ptr.To = to
+		ptr = to
+		p.advance()
+	}
+
 	if !p.assertCurrIs(token.IDENT) {
 		return nil, false
 	}
-	t := &ast.Type{Token: p.curr, Type: types.FromToken(p.curr)}
+	t.Token = p.curr
+	if ptr != nil {
+		ptr.To = types.FromToken(p.curr)
+	} else {
+		t.Type = types.FromToken(p.curr)
+	}
 	p.advance()
+
 	return t, true
 }
 

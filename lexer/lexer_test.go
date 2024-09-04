@@ -7,7 +7,7 @@ import (
 
 func TestLex(t *testing.T) {
 	input := `
-extern func puts(*u8) i32;
+extern func puts(^u8) i32;
 
 func main() {
 	puts("hello world");
@@ -21,7 +21,7 @@ func main() {
 		token.Token{Type: token.FUNC, Value: "func"},
 		token.Token{Type: token.IDENT, Value: "puts"},
 		token.Token{Type: token.LPAREN, Value: "("},
-		token.Token{Type: token.ASTERISK, Value: "*"},
+		token.Token{Type: token.POINTER, Value: "^"},
 		token.Token{Type: token.IDENT, Value: "u8"},
 		token.Token{Type: token.RPAREN, Value: ")"},
 		token.Token{Type: token.IDENT, Value: "i32"},

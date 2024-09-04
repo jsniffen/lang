@@ -61,6 +61,8 @@ func (l *Lexer) NextToken() token.Token {
 		tok = token.New(token.MINUS, string(l.ch), line, col, l.Filename)
 	case ',':
 		tok = token.New(token.COMMA, string(l.ch), line, col, l.Filename)
+	case '^':
+		tok = token.New(token.POINTER, string(l.ch), line, col, l.Filename)
 	case '"':
 		value := l.eatString()
 		return token.New(token.STRING, value, line, col, l.Filename)
