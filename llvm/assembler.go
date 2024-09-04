@@ -147,8 +147,9 @@ func (a *Assembler) generateInfixExpression(ie *ast.InfixExpression) {
 }
 
 func (a *Assembler) generateReturn(r *ast.Return) {
-	a.generateNode(r.Value)
-	a.newLine()
+	if a.generateNode(r.Value) > 0 {
+		a.newLine()
+	}
 	a.writef("ret %s %s", r.Value.Type().Name(), r.Value.Location())
 }
 

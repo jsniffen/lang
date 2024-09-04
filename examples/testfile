@@ -1,7 +1,5 @@
-func add(a ^i32, b ^i32) i32 {
-	return a + b
-}
+func rand() i32
 
 func main() i32 {
-	return 1
+	return rand()
 }
