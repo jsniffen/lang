@@ -67,7 +67,7 @@ type IntLiteral struct {
 
 func (il *IntLiteral) isNode()          {}
 func (il *IntLiteral) isExpression()    {}
-func (il *IntLiteral) Type() types.Type { return types.Int32 }
+func (il *IntLiteral) Type() types.Type { return types.TypeInt32 }
 func (il *IntLiteral) Location() string { return il.Token.Value }
 
 type Return struct {
@@ -127,7 +127,7 @@ type EmptyExpression struct{}
 
 func (ee *EmptyExpression) isNode()          {}
 func (ee *EmptyExpression) isExpression()    {}
-func (ee *EmptyExpression) Type() types.Type { return types.Nil }
+func (ee *EmptyExpression) Type() types.Type { return types.TypeNil }
 func (ee *EmptyExpression) Location() string { return "" }
 
 type RegisterExpression struct {

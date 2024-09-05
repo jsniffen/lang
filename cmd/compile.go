@@ -42,8 +42,9 @@ func main() {
 		return
 	}
 
-	a := llvm.New(prog)
-	code := a.Generate()
+	gen := llvm.NewGenerator()
+	code := gen.Generate(prog)
+	// code := a.Generate()
 	fmt.Println(code)
 	os.WriteFile(outputFile, []byte(code), 0666)
 }

@@ -8,8 +8,8 @@ type Type interface {
 }
 
 var (
-	Int32 = &int32{}
-	Nil   = &nil{}
+	TypeInt32 = &Int32{}
+	TypeNil   = &Nil{}
 )
 
 type Pointer struct {
@@ -19,15 +19,15 @@ type Pointer struct {
 func (p *Pointer) IsNumeric() bool { return false }
 func (p *Pointer) Name() string    { return "ptr" }
 
-type int32 struct{}
+type Int32 struct{}
 
-func (i *int32) IsNumeric() bool { return true }
-func (i *int32) Name() string    { return "i32" }
+func (i *Int32) IsNumeric() bool { return true }
+func (i *Int32) Name() string    { return "i32" }
 
-type nil struct{}
+type Nil struct{}
 
-func (n *nil) IsNumeric() bool { return false }
-func (n *nil) Name() string    { return "" }
+func (n *Nil) IsNumeric() bool { return false }
+func (n *Nil) Name() string    { return "" }
 
 type Custom struct {
 	name string
@@ -39,9 +39,9 @@ func (c *Custom) Name() string    { return c.name }
 func FromToken(t token.Token) Type {
 	switch t.Value {
 	case "i32":
-		return Int32
+		return TypeInt32
 	case "nil":
-		return Nil
+		return TypeNil
 	default:
 		return &Custom{name: t.Value}
 	}

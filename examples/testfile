@@ -1,5 +1,15 @@
 func rand() i32
 
+func add(a i32, b i32) i32 {
+	return a + b
+}
+
+func mult(a i32, b i32) i32 {
+	return a * b
+}
+
 func main() i32 {
-	return rand()
+	var x i32 = 1 + 2 + 3 + rand()
+	var y i32 = 2
+	return add(x, y) + mult(x, y)
 }
